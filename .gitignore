@@ -5,6 +5,7 @@
 # Build outputs
 /dist/
 /releases/
+.netlify/
 
 # Local speech models
 *.bin
