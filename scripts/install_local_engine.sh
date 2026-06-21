@@ -6,6 +6,33 @@ MODEL_DIR="$HOME/Library/Application Support/KikuDictate/Models"
 MODEL_PATH="$MODEL_DIR/ggml-large-v3-turbo.bin"
 INSTALL_OK=1
 
+detect_active_ipv4() {
+  local iface
+  iface="$(route get default 2>/dev/null | awk '/interface:/{print $2; exit}')"
+  if [[ -n "$iface" ]]; then
+    ipconfig getifaddr "$iface" 2>/dev/null || true
+  fi
+}
+
+download_with_network_fallback() {
+  local url="$1"
+  local output="$2"
+  local active_ipv4
+
+  if curl -L --fail "$url" -o "$output"; then
+    return 0
+  fi
+
+  active_ipv4="$(detect_active_ipv4)"
+  if [[ -n "$active_ipv4" ]]; then
+    echo "Retrying download bound to active IPv4 address: $active_ipv4"
+    curl --interface "$active_ipv4" -L --fail "$url" -o "$output"
+    return $?
+  fi
+
+  return 1
+}
+
 if ! command -v brew >/dev/null 2>&1; then
   echo "Homebrew was not found. Install whisper-cpp manually, then set the engine path in Kiku Dictate."
   INSTALL_OK=0
@@ -24,7 +51,7 @@ if [[ -f "$MODEL_PATH" ]]; then
   echo "Model already exists: $MODEL_PATH"
 else
   echo "Downloading model..."
-  if ! curl -L --fail "$MODEL_URL" -o "$MODEL_PATH"; then
+  if ! download_with_network_fallback "$MODEL_URL" "$MODEL_PATH"; then
     rm -f "$MODEL_PATH"
     echo "WARNING: model download failed."
     echo "Download this file through a trusted channel and place it at: $MODEL_PATH"
