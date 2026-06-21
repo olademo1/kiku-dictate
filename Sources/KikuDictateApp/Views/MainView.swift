@@ -646,52 +646,35 @@ private enum Palette {
 
 private struct DataikuChirpMark: View {
     var body: some View {
-        Group {
-            if let image = NSImage(named: "BrandMark") {
-                Image(nsImage: image)
-                    .resizable()
-                    .scaledToFit()
-            } else {
-                fallbackMark
-            }
-        }
-    }
-
-    private var fallbackMark: some View {
         GeometryReader { proxy in
-            let size = min(proxy.size.width, proxy.size.height)
+            let width = proxy.size.width
+            let height = proxy.size.height
+            let unit = min(width, height)
 
             ZStack {
                 DataikuBirdShape()
                     .fill(Palette.ink)
-                    .frame(width: size * 0.78, height: size * 0.78)
-                    .position(x: size * 0.43, y: size * 0.58)
+                    .frame(width: width * 0.82, height: height * 0.94)
+                    .position(x: width * 0.38, y: height * 0.55)
 
                 Circle()
                     .fill(Palette.canvas)
-                    .frame(width: size * 0.055, height: size * 0.055)
-                    .position(x: size * 0.54, y: size * 0.39)
+                    .frame(width: unit * 0.075, height: unit * 0.075)
+                    .position(x: width * 0.48, y: height * 0.37)
 
-                RoundedRectangle(cornerRadius: size * 0.014)
+                RoundedRectangle(cornerRadius: unit * 0.016)
                     .fill(Palette.ink)
-                    .frame(width: size * 0.24, height: size * 0.055)
-                    .position(x: size * 0.60, y: size * 0.72)
+                    .frame(width: width * 0.34, height: height * 0.07)
+                    .position(x: width * 0.50, y: height * 0.78)
 
                 SpeechBubbleShape()
                     .fill(Palette.ink)
-                    .frame(width: size * 0.38, height: size * 0.28)
-                    .position(x: size * 0.72, y: size * 0.24)
-
-                HStack(spacing: size * 0.025) {
-                    ForEach(0..<3, id: \.self) { index in
-                        RoundedRectangle(cornerRadius: size * 0.015)
-                            .fill(Palette.canvas)
-                            .frame(width: size * 0.026, height: size * CGFloat([0.08, 0.14, 0.10][index]))
-                    }
-                }
-                .position(x: size * 0.72, y: size * 0.23)
+                    .frame(width: width * 0.34, height: height * 0.28)
+                    .position(x: width * 0.78, y: height * 0.20)
             }
         }
+        .aspectRatio(58 / 50, contentMode: .fit)
+        .accessibilityHidden(true)
     }
 }
 
@@ -704,26 +687,26 @@ private struct DataikuBirdShape: Shape {
         path.move(to: CGPoint(x: rect.minX + w * 0.08, y: rect.minY + h * 0.86))
         path.addLine(to: CGPoint(x: rect.minX + w * 0.39, y: rect.minY + h * 0.54))
         path.addCurve(
-            to: CGPoint(x: rect.minX + w * 0.54, y: rect.minY + h * 0.22),
-            control1: CGPoint(x: rect.minX + w * 0.42, y: rect.minY + h * 0.38),
-            control2: CGPoint(x: rect.minX + w * 0.48, y: rect.minY + h * 0.25)
+            to: CGPoint(x: rect.minX + w * 0.54, y: rect.minY + h * 0.25),
+            control1: CGPoint(x: rect.minX + w * 0.43, y: rect.minY + h * 0.40),
+            control2: CGPoint(x: rect.minX + w * 0.49, y: rect.minY + h * 0.26)
         )
         path.addCurve(
             to: CGPoint(x: rect.minX + w * 0.73, y: rect.minY + h * 0.28),
-            control1: CGPoint(x: rect.minX + w * 0.63, y: rect.minY + h * 0.17),
+            control1: CGPoint(x: rect.minX + w * 0.61, y: rect.minY + h * 0.19),
             control2: CGPoint(x: rect.minX + w * 0.70, y: rect.minY + h * 0.21)
         )
         path.addLine(to: CGPoint(x: rect.minX + w * 0.86, y: rect.minY + h * 0.22))
         path.addLine(to: CGPoint(x: rect.minX + w * 0.78, y: rect.minY + h * 0.34))
         path.addCurve(
             to: CGPoint(x: rect.minX + w * 0.60, y: rect.minY + h * 0.61),
-            control1: CGPoint(x: rect.minX + w * 0.75, y: rect.minY + h * 0.50),
-            control2: CGPoint(x: rect.minX + w * 0.68, y: rect.minY + h * 0.60)
+            control1: CGPoint(x: rect.minX + w * 0.77, y: rect.minY + h * 0.48),
+            control2: CGPoint(x: rect.minX + w * 0.70, y: rect.minY + h * 0.59)
         )
         path.addCurve(
             to: CGPoint(x: rect.minX + w * 0.32, y: rect.minY + h * 0.60),
             control1: CGPoint(x: rect.minX + w * 0.50, y: rect.minY + h * 0.64),
-            control2: CGPoint(x: rect.minX + w * 0.41, y: rect.minY + h * 0.63)
+            control2: CGPoint(x: rect.minX + w * 0.40, y: rect.minY + h * 0.64)
         )
         path.addLine(to: CGPoint(x: rect.minX + w * 0.08, y: rect.minY + h * 0.86))
         path.closeSubpath()
@@ -735,18 +718,24 @@ private struct DataikuBirdShape: Shape {
 private struct SpeechBubbleShape: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()
-        let corner = min(rect.width, rect.height) * 0.24
         let bubbleRect = CGRect(
             x: rect.minX,
             y: rect.minY,
-            width: rect.width,
-            height: rect.height * 0.76
+            width: rect.width * 0.88,
+            height: rect.height * 0.78
         )
+        let corner = bubbleRect.height / 2
 
         path.addRoundedRect(in: bubbleRect, cornerSize: CGSize(width: corner, height: corner))
-        path.move(to: CGPoint(x: rect.minX + rect.width * 0.36, y: bubbleRect.maxY - 1))
-        path.addLine(to: CGPoint(x: rect.minX + rect.width * 0.22, y: rect.maxY))
-        path.addLine(to: CGPoint(x: rect.minX + rect.width * 0.56, y: bubbleRect.maxY - 1))
+        path.move(to: CGPoint(x: rect.minX + rect.width * 0.30, y: bubbleRect.maxY - 1))
+        path.addQuadCurve(
+            to: CGPoint(x: rect.minX + rect.width * 0.05, y: rect.minY + rect.height * 0.92),
+            control: CGPoint(x: rect.minX + rect.width * 0.22, y: rect.minY + rect.height * 0.92)
+        )
+        path.addQuadCurve(
+            to: CGPoint(x: rect.minX + rect.width * 0.54, y: bubbleRect.maxY - 1),
+            control: CGPoint(x: rect.minX + rect.width * 0.30, y: rect.minY + rect.height * 0.99)
+        )
         path.closeSubpath()
 
         return path
