@@ -375,30 +375,34 @@ li + li {
   margin-top: 0;
 }
 
-.verification-note {
-  max-width: 320px;
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.4;
-}
-
-.verification-note a {
-  color: var(--green-dark);
-  font-weight: 800;
-}
-
 footer {
   display: flex;
-  justify-content: center;
-  gap: 18px;
+  align-items: center;
+  flex-direction: column;
+  gap: 8px;
   padding: 28px 24px 38px;
   color: var(--muted);
   font-size: 14px;
   font-weight: 700;
 }
 
+.footer-links {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+}
+
 footer a {
   text-decoration: none;
+}
+
+.footer-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: center;
 }
 
 @media (max-width: 860px) {
