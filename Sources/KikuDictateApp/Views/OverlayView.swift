@@ -4,6 +4,15 @@ struct OverlayView: View {
     @ObservedObject var viewModel: AppViewModel
 
     var body: some View {
+        ZStack {
+            Color.clear
+            pill
+        }
+        .frame(width: 196, height: 58)
+        .background(Color.clear)
+    }
+
+    private var pill: some View {
         HStack(spacing: 9) {
             leadingStatus
 
@@ -41,8 +50,6 @@ struct OverlayView: View {
             RoundedRectangle(cornerRadius: 21, style: .continuous)
                 .stroke(OverlayPalette.green.opacity(0.26), lineWidth: 1)
         )
-        .shadow(color: OverlayPalette.green.opacity(0.18), radius: 16, x: 0, y: 8)
-        .shadow(color: .black.opacity(0.10), radius: 4, x: 0, y: 2)
         .contentShape(RoundedRectangle(cornerRadius: 21, style: .continuous))
         .onTapGesture {
             handlePillTap()
