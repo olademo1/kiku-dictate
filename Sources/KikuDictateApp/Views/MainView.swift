@@ -735,6 +735,21 @@ private enum Palette {
 
 private struct DataikuChirpMark: View {
     var body: some View {
+        Group {
+            if let image = NSImage(named: "BrandMark") {
+                Image(nsImage: image)
+                    .resizable()
+                    .interpolation(.high)
+                    .antialiased(true)
+                    .scaledToFit()
+            } else {
+                fallbackMark
+            }
+        }
+        .accessibilityHidden(true)
+    }
+
+    private var fallbackMark: some View {
         GeometryReader { proxy in
             let width = proxy.size.width
             let height = proxy.size.height
@@ -763,7 +778,6 @@ private struct DataikuChirpMark: View {
             }
         }
         .aspectRatio(58 / 50, contentMode: .fit)
-        .accessibilityHidden(true)
     }
 }
 
