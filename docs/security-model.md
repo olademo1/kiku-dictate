@@ -42,7 +42,7 @@ Transcription uses `Process.executableURL` and an argument array. It does not bu
 
 The app has no network transcription path. The install helper downloads the model once, outside app runtime, and can be omitted if IT distributes the model through MDM.
 
-Global usage sharing is optional and off by default. When enabled, it sends cumulative aggregate counters only:
+Global usage sharing is optional and defaults on in configured team-usage builds. Setup requires a team selection before anything can sync, and users can turn sharing off. When enabled, it sends cumulative aggregate counters only:
 
 - installation ID
 - broad team name

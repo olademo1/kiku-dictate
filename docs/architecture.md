@@ -46,4 +46,4 @@ The app does not trust or call:
 - Remote transcription services.
 - Prompt-based correction services.
 
-The optional global usage endpoint is outside the transcription trust boundary. It receives cumulative counters only and is off by default.
+The optional global usage endpoint is outside the transcription trust boundary. In configured team-usage builds, sharing defaults on but cannot sync until a team is selected, and users can turn it off. It receives cumulative counters only.
