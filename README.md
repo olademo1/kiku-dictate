@@ -10,7 +10,21 @@ The major difference is the security model: there is no OpenAI API key, no promp
 - Uses local `whisper-cli` with a local Whisper model file.
 - Default target model: `ggml-large-v3-turbo.bin`.
 - Stores only aggregate usage metrics.
+- Ships as a downloadable `.zip` release artifact for testers.
 - Builds without network access or third-party Swift dependencies.
+
+## Download For Testers
+
+Go to the repo's [Releases page](https://github.com/olademo1/kiku-dictate/releases), download the latest `KikuDictate-macOS-*.zip`, unzip it, then drag `Kiku Dictate.app` into `/Applications`.
+
+On first launch:
+
+1. Open `Kiku Dictate.app`.
+2. Allow microphone access.
+3. Enable Accessibility only if you want automatic paste into the active app.
+4. Press the configured shortcut or the `Record` button.
+
+If macOS blocks the app because it has not been notarized yet, open it from Finder by right-clicking `Kiku Dictate.app` and choosing `Open`. This prototype is Developer ID signed locally but not yet notarized for broad external distribution.
 
 ## Setup
 
@@ -30,6 +44,8 @@ The model file is large and is intentionally not committed to git. The helper in
 ## Cost And Model Notes
 
 When the model and `whisper-cli` are running locally, transcription has no per-minute API fee. It is not literally cost-free: users still pay with local CPU/GPU time, battery, storage, IT packaging, support, and security review. For an internal rollout, that usually means the marginal transcription cost is effectively zero after the model is distributed.
+
+The in-app `Spend avoided` number is therefore an estimate of vendor transcription spend avoided, not profit or fully loaded ROI. The default estimate uses the avoided API spend assumption in `UsagePricing.swift`, while `Time saved` estimates typing time avoided from aggregate word counts. Kiku stores only those aggregate counters, not transcript text.
 
 The default model is `ggml-large-v3-turbo.bin`, which is about 1.62 GB in the upstream `whisper.cpp` model repository. The full `ggml-large-v3.bin` model is about 3.1 GB and may be more accurate in some cases, but it is slower and heavier. Quantized turbo options are smaller, but the default keeps quality higher for a company-wide writing tool.
 
@@ -61,6 +77,10 @@ dist/Kiku Dictate.app
 - No shell interpolation for transcription commands.
 - Temporary audio deleted after transcription or failure.
 - Usage metrics are aggregate-only: seconds, word count, estimated time saved, estimated vendor cost avoided.
+
+## Shortcut Notes
+
+The default shortcut is `Control Space` because `Option Space` conflicts with ChatGPT/OpenAI on many Macs. In Preferences, users can pick another shortcut. The `1-key` toggle allows bare single-key shortcuts, but it is off by default because a global single-key shortcut can intercept normal typing.
 
 See [docs/security-model.md](docs/security-model.md) and [docs/reviewer-checklist.md](docs/reviewer-checklist.md).
 

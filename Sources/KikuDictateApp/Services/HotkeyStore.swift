@@ -11,14 +11,14 @@ final class HotkeyStore {
         self.defaults = defaults
     }
 
-    func load() -> Hotkey {
+    func load(allowSingleKey: Bool = false) -> Hotkey {
         guard let data = defaults.data(forKey: key),
               let value = try? JSONDecoder().decode(Hotkey.self, from: data)
         else {
             return .default
         }
 
-        guard value.isValidGlobalShortcut else {
+        guard value.isValidGlobalShortcut(allowSingleKey: allowSingleKey) else {
             save(.default)
             return .default
         }

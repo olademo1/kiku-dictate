@@ -38,6 +38,7 @@ final class AppViewModel: ObservableObject {
     @Published var runningFromApplications = false
     @Published var launchAtLoginEnabled = false
     @Published var overlayPillVisible = true
+    @Published var allowSingleKeyShortcuts = false
     @Published var isCapturingHotkey = false
     @Published var usageStoragePath = ""
     @Published var usageSummary = UsageSummary.empty
@@ -64,6 +65,7 @@ final class AppViewModel: ObservableObject {
     private let minDuration: TimeInterval = 0.7
     private let persistentStartModeKey = "kiku_dictate_persistent_start_mode"
     private let overlayPillVisibleKey = "kiku_dictate_overlay_pill_visible"
+    private let allowSingleKeyShortcutsKey = "kiku_dictate_allow_single_key_shortcuts"
     private let userApplicationsRoot: String = {
         let path = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Applications").path
         return URL(fileURLWithPath: path).resolvingSymlinksInPath().path
@@ -88,7 +90,9 @@ final class AppViewModel: ObservableObject {
         if UserDefaults.standard.object(forKey: overlayPillVisibleKey) as? Bool == false {
             overlayPillVisible = false
         }
-        hotkey = hotkeyStore.load()
+        let storedAllowSingleKeyShortcuts = UserDefaults.standard.bool(forKey: allowSingleKeyShortcutsKey)
+        allowSingleKeyShortcuts = storedAllowSingleKeyShortcuts
+        hotkey = hotkeyStore.load(allowSingleKey: storedAllowSingleKeyShortcuts)
         localModelSettings = modelSettingsStore.load()
         usageRecords = usageStore.load()
         usageStoragePath = usageStore.location.path
@@ -195,6 +199,11 @@ final class AppViewModel: ObservableObject {
     }
 
     func updateHotkey(_ newHotkey: Hotkey) {
+        guard newHotkey.isValidGlobalShortcut(allowSingleKey: allowSingleKeyShortcuts) else {
+            hotkeyCaptureInvalid()
+            return
+        }
+
         let previousHotkey = hotkey
 
         do {
@@ -224,7 +233,9 @@ final class AppViewModel: ObservableObject {
     }
 
     func hotkeyCaptureInvalid() {
-        statusMessage = "Use a shortcut with Control, Option, or Command."
+        statusMessage = allowSingleKeyShortcuts
+            ? "That key cannot be used as a shortcut."
+            : "Use Control, Option, or Command, or turn on 1-key."
     }
 
     func setPersistentStartMode(_ mode: PersistentStartMode) {
@@ -444,6 +455,21 @@ final class AppViewModel: ObservableObject {
         UserDefaults.standard.set(visible, forKey: overlayPillVisibleKey)
         applyOverlayPillVisibility()
         statusMessage = visible ? "Floating pill shown." : "Floating pill hidden."
+    }
+
+    func setAllowSingleKeyShortcuts(_ enabled: Bool) {
+        allowSingleKeyShortcuts = enabled
+        UserDefaults.standard.set(enabled, forKey: allowSingleKeyShortcutsKey)
+
+        if !enabled && !hotkey.isValidGlobalShortcut(allowSingleKey: false) {
+            updateHotkey(.default)
+            statusMessage = "1-key disabled. Shortcut reset to \(Hotkey.default.displayValue)."
+            return
+        }
+
+        statusMessage = enabled
+            ? "1-key shortcuts enabled. Pick a key you do not type often."
+            : "1-key shortcuts disabled."
     }
 
     func overlayPrimaryAction() {

@@ -19,11 +19,20 @@ struct Hotkey: Codable, Equatable {
         modifiers: UInt32(controlKey)
     )
 
-    var isValidGlobalShortcut: Bool {
+    var isSingleKeyShortcut: Bool {
+        let modifierMask = UInt32(cmdKey | optionKey | shiftKey | controlKey) | Hotkey.fnModifierMask
+        return modifiers & modifierMask == 0
+    }
+
+    func isValidGlobalShortcut(allowSingleKey: Bool = false) -> Bool {
         let commandLikeModifiers = modifiers & UInt32(cmdKey | optionKey | controlKey)
         let isFunctionKey = Self.functionKeyCodes.contains(keyCode)
 
         if isFunctionKey {
+            return true
+        }
+
+        if allowSingleKey && isSingleKeyShortcut {
             return true
         }
 
@@ -127,7 +136,7 @@ struct Hotkey: Codable, Equatable {
         }
     }
 
-    static func from(event: NSEvent) -> Hotkey? {
+    static func from(event: NSEvent, allowSingleKey: Bool = false) -> Hotkey? {
         let keyCode = UInt32(event.keyCode)
         let relevantFlags = event.modifierFlags.intersection([.command, .option, .shift, .control, .function])
 
@@ -139,6 +148,6 @@ struct Hotkey: Codable, Equatable {
         if relevantFlags.contains(.function) { modifiers |= Hotkey.fnModifierMask }
 
         let hotkey = Hotkey(keyCode: keyCode, modifiers: modifiers)
-        return hotkey.isValidGlobalShortcut ? hotkey : nil
+        return hotkey.isValidGlobalShortcut(allowSingleKey: allowSingleKey) ? hotkey : nil
     }
 }

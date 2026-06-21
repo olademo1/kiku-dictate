@@ -4,6 +4,7 @@ import SwiftUI
 
 struct HotkeyCaptureButton: View {
     let currentHotkey: Hotkey
+    let allowSingleKey: Bool
     let onUpdate: (Hotkey) -> Void
     let onCaptureStateChange: (Bool) -> Void
     let onInvalidCapture: () -> Void
@@ -75,7 +76,7 @@ struct HotkeyCaptureButton: View {
             return
         }
 
-        guard let hotkey = Hotkey.from(event: event) else {
+        guard let hotkey = Hotkey.from(event: event, allowSingleKey: allowSingleKey) else {
             NSSound.beep()
             onInvalidCapture()
             return

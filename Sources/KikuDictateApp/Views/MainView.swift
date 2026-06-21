@@ -185,7 +185,10 @@ struct MainView: View {
                     .foregroundStyle(Palette.muted)
                     .frame(width: 58, alignment: .leading)
 
-                HotkeyCaptureButton(currentHotkey: viewModel.hotkey) { value in
+                HotkeyCaptureButton(
+                    currentHotkey: viewModel.hotkey,
+                    allowSingleKey: viewModel.allowSingleKeyShortcuts
+                ) { value in
                     viewModel.updateHotkey(value)
                 } onCaptureStateChange: { active in
                     viewModel.setHotkeyCapture(active: active)
@@ -213,6 +216,15 @@ struct MainView: View {
                 .labelsHidden()
                 .frame(width: 200)
 
+                Spacer()
+
+                compactToggle("1-key", isOn: Binding(
+                    get: { viewModel.allowSingleKeyShortcuts },
+                    set: { viewModel.setAllowSingleKeyShortcuts($0) }
+                ))
+            }
+
+            HStack(spacing: 12) {
                 compactToggle("Login", isOn: Binding(
                     get: { viewModel.launchAtLoginEnabled },
                     set: { viewModel.setLaunchAtLogin($0) }
