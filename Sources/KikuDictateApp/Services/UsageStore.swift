@@ -8,9 +8,17 @@ final class UsageStore {
 
     init(fileManager: FileManager = .default) {
         let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let folder = appSupport.appendingPathComponent("KikuDictate", isDirectory: true)
+        let folder = appSupport.appendingPathComponent(AppConstants.appSupportFolder, isDirectory: true)
         try? fileManager.createDirectory(at: folder, withIntermediateDirectories: true)
         location = folder.appendingPathComponent("usage.json")
+
+        let legacyLocation = appSupport
+            .appendingPathComponent(AppConstants.legacyAppSupportFolder, isDirectory: true)
+            .appendingPathComponent("usage.json")
+        if !fileManager.fileExists(atPath: location.path),
+           fileManager.fileExists(atPath: legacyLocation.path) {
+            try? fileManager.copyItem(at: legacyLocation, to: location)
+        }
 
         encoder.outputFormatting = [.prettyPrinted]
         encoder.dateEncodingStrategy = .iso8601

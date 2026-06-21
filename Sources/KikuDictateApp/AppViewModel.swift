@@ -45,11 +45,17 @@ final class AppViewModel: ObservableObject {
     @Published var usagePricingNote = UsagePricing.note
     @Published var persistentStartMode: PersistentStartMode
     @Published var localModelSettings: LocalModelSettings
+    @Published var globalUsageSettings: GlobalUsageSettings
+    @Published var globalUsageSnapshot = GlobalUsageSnapshot.empty
+    @Published var globalUsageStatus = "Team stats sharing is off."
+    @Published var isSyncingGlobalUsage = false
 
     private let hotkeyStore = HotkeyStore()
     private let hotkeyMonitor = HotkeyMonitor()
     private let modelSettingsStore = LocalModelSettingsStore()
     private let usageStore = UsageStore()
+    private let globalUsageSettingsStore = GlobalUsageSettingsStore()
+    private let globalUsageClient = GlobalUsageClient()
     private let recorder = AudioRecorder()
     private let transcriber = LocalWhisperTranscriber()
     private let pasteInjector = PasteInjector()
@@ -81,6 +87,7 @@ final class AppViewModel: ObservableObject {
     private var clearTapTask: Task<Void, Never>?
     private var holdTask: Task<Void, Never>?
     private var durationTask: Task<Void, Never>?
+    private var globalUsageSyncTask: Task<Void, Never>?
     private var appActivatedObserver: Any?
     private var accessibilityRefreshTask: Task<Void, Never>?
 
@@ -94,6 +101,7 @@ final class AppViewModel: ObservableObject {
         allowSingleKeyShortcuts = storedAllowSingleKeyShortcuts
         hotkey = hotkeyStore.load(allowSingleKey: storedAllowSingleKeyShortcuts)
         localModelSettings = modelSettingsStore.load()
+        globalUsageSettings = globalUsageSettingsStore.load()
         usageRecords = usageStore.load()
         usageStoragePath = usageStore.location.path
         usageSummary = UsageSummary.from(records: usageRecords)
@@ -106,6 +114,11 @@ final class AppViewModel: ObservableObject {
         registerInitialHotkey()
 
         applyOverlayPillVisibility()
+        refreshGlobalUsageStatus()
+
+        if globalUsageSettings.isConfigured {
+            refreshGlobalUsage()
+        }
 
         appActivatedObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.didBecomeActiveNotification,
@@ -123,6 +136,7 @@ final class AppViewModel: ObservableObject {
         clearTapTask?.cancel()
         holdTask?.cancel()
         durationTask?.cancel()
+        globalUsageSyncTask?.cancel()
         accessibilityRefreshTask?.cancel()
         if let appActivatedObserver {
             NotificationCenter.default.removeObserver(appActivatedObserver)
@@ -164,6 +178,12 @@ final class AppViewModel: ObservableObject {
         "\(localModelSettings.modelName) - \(modelSizeDescription)"
     }
 
+    var appVersion: String {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "dev"
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "local"
+        return "\(version) (\(build))"
+    }
+
     func updateEnginePath(_ path: String) {
         var next = localModelSettings
         next.enginePath = path.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -173,6 +193,13 @@ final class AppViewModel: ObservableObject {
     func updateModelPath(_ path: String) {
         var next = localModelSettings
         next.modelPath = path.trimmingCharacters(in: .whitespacesAndNewlines)
+        saveModelSettings(next)
+    }
+
+    func updateModelName(_ name: String) {
+        var next = localModelSettings
+        let cleaned = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        next.modelName = cleaned.isEmpty ? URL(fileURLWithPath: next.modelPath).lastPathComponent : cleaned
         saveModelSettings(next)
     }
 
@@ -196,6 +223,46 @@ final class AppViewModel: ObservableObject {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(command, forType: .string)
         statusMessage = "Local model install commands copied."
+    }
+
+    func updateGlobalUsageEndpoint(_ value: String) {
+        var next = globalUsageSettings
+        next.endpointURLString = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        saveGlobalUsageSettings(next)
+    }
+
+    func updateGlobalUsageTeamKey(_ value: String) {
+        var next = globalUsageSettings
+        next.teamKey = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        saveGlobalUsageSettings(next)
+    }
+
+    func setGlobalUsageSharing(_ enabled: Bool) {
+        var next = globalUsageSettings
+        next.enabled = enabled
+        saveGlobalUsageSettings(next)
+
+        if enabled {
+            syncGlobalUsageNow()
+        } else {
+            globalUsageStatus = "Team stats sharing is off."
+        }
+    }
+
+    func refreshGlobalUsage() {
+        globalUsageSyncTask?.cancel()
+        globalUsageSyncTask = Task { [weak self] in
+            guard let self else { return }
+            await self.fetchGlobalUsageSnapshot()
+        }
+    }
+
+    func syncGlobalUsageNow() {
+        globalUsageSyncTask?.cancel()
+        globalUsageSyncTask = Task { [weak self] in
+            guard let self else { return }
+            await self.syncGlobalUsage(force: true)
+        }
     }
 
     func updateHotkey(_ newHotkey: Hotkey) {
@@ -250,7 +317,7 @@ final class AppViewModel: ObservableObject {
 
         switch microphonePermissionState {
         case .denied:
-            statusMessage = "Microphone permission is denied. Enable Kiku Dictate in System Settings > Privacy & Security > Microphone."
+            statusMessage = "Microphone permission is denied. Enable Dataiku Chirp in System Settings > Privacy & Security > Microphone."
             return
         case .restricted:
             statusMessage = "Microphone access is restricted by system policy."
@@ -270,7 +337,7 @@ final class AppViewModel: ObservableObject {
 
         switch microphonePermissionState {
         case .denied:
-            statusMessage = "Microphone permission is denied. Enable Kiku Dictate in System Settings > Privacy & Security > Microphone."
+            statusMessage = "Microphone permission is denied. Enable Dataiku Chirp in System Settings > Privacy & Security > Microphone."
         case .restricted:
             statusMessage = "Microphone access is restricted by system policy."
         case .undetermined:
@@ -288,7 +355,7 @@ final class AppViewModel: ObservableObject {
         if granted {
             statusMessage = "Accessibility is enabled."
         } else if !hasAccessibilityPermission {
-            statusMessage = "Enable Accessibility for Kiku Dictate in System Settings, then relaunch Kiku Dictate."
+            statusMessage = "Enable Accessibility for Dataiku Chirp in System Settings, then relaunch Dataiku Chirp."
             startAccessibilityRefreshWindow()
         }
     }
@@ -326,7 +393,7 @@ final class AppViewModel: ObservableObject {
     func bringMainWindowToFront() {
         NSApp.activate(ignoringOtherApps: true)
         let candidates = NSApp.windows.filter { !($0 is NSPanel) }
-        if let window = candidates.first(where: { $0.title.contains("Kiku Dictate") }) ?? candidates.first {
+        if let window = candidates.first(where: { $0.title.contains("Dataiku Chirp") }) ?? candidates.first {
             window.makeKeyAndOrderFront(nil)
         }
     }
@@ -338,7 +405,7 @@ final class AppViewModel: ObservableObject {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown"
         let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "unknown"
         let diagnostics = """
-        Kiku Dictate Diagnostics
+        Dataiku Chirp Diagnostics
         Bundle ID: \(bundleId)
         Version: \(version)
         Build: \(build)
@@ -491,6 +558,83 @@ final class AppViewModel: ObservableObject {
         localModelSettings = settings
         modelSettingsStore.save(settings)
         refreshSetupStatus(showReadyMessage: false)
+    }
+
+    private func saveGlobalUsageSettings(_ settings: GlobalUsageSettings) {
+        globalUsageSettings = settings
+        globalUsageSettingsStore.save(settings)
+        refreshGlobalUsageStatus()
+    }
+
+    private func refreshGlobalUsageStatus() {
+        if !globalUsageSettings.enabled {
+            globalUsageStatus = "Team stats sharing is off."
+        } else if !globalUsageSettings.isConfigured {
+            globalUsageStatus = "Add a web app URL and team key to sync team stats."
+        } else if let lastSyncedAt = globalUsageSettings.lastSyncedAt {
+            globalUsageStatus = "Team stats synced \(lastSyncedAt.formatted(date: .omitted, time: .shortened))."
+        } else {
+            globalUsageStatus = "Team stats ready to sync."
+        }
+    }
+
+    private func fetchGlobalUsageSnapshot() async {
+        guard globalUsageSettings.isConfigured else {
+            globalUsageStatus = "Add a web app URL and team key to view team stats."
+            return
+        }
+
+        isSyncingGlobalUsage = true
+        globalUsageStatus = "Refreshing team stats..."
+        defer { isSyncingGlobalUsage = false }
+
+        do {
+            globalUsageSnapshot = try await globalUsageClient.fetch(settings: globalUsageSettings)
+            globalUsageStatus = "Team stats refreshed."
+        } catch {
+            globalUsageStatus = error.localizedDescription
+        }
+    }
+
+    private func syncGlobalUsageIfNeeded(force: Bool) {
+        globalUsageSyncTask?.cancel()
+        globalUsageSyncTask = Task { [weak self] in
+            guard let self else { return }
+            await self.syncGlobalUsage(force: force)
+        }
+    }
+
+    private func syncGlobalUsage(force: Bool) async {
+        guard globalUsageSettings.enabled else { return }
+        guard globalUsageSettings.isConfigured else {
+            globalUsageStatus = "Add a web app URL and team key to sync team stats."
+            return
+        }
+
+        if !force,
+           let lastSyncedAt = globalUsageSettings.lastSyncedAt,
+           Date().timeIntervalSince(lastSyncedAt) < 15 * 60 {
+            return
+        }
+
+        isSyncingGlobalUsage = true
+        globalUsageStatus = "Syncing aggregate team stats..."
+        defer { isSyncingGlobalUsage = false }
+
+        do {
+            let snapshot = try await globalUsageClient.sync(
+                settings: globalUsageSettings,
+                summary: usageSummary,
+                modelName: localModelSettings.modelName,
+                appVersion: appVersion
+            )
+            globalUsageSnapshot = snapshot
+            var next = globalUsageSettings
+            next.lastSyncedAt = Date()
+            saveGlobalUsageSettings(next)
+        } catch {
+            globalUsageStatus = error.localizedDescription
+        }
     }
 
     private func wireHotkeyCallbacks() {
@@ -714,7 +858,7 @@ final class AppViewModel: ObservableObject {
             if case PasteInjectorError.accessibilityPermissionRequired = error {
                 _ = pasteInjector.requestAccessibilityPermissionIfNeeded()
                 refreshSetupStatus(showReadyMessage: false)
-                statusMessage = "Enable Accessibility for Kiku Dictate, then try again. Copied to clipboard."
+                statusMessage = "Enable Accessibility for Dataiku Chirp, then try again. Copied to clipboard."
             } else if let pasteError = error as? PasteInjectorError {
                 statusMessage = "\(pasteError.localizedDescription) Copied to clipboard."
             } else {
@@ -753,6 +897,7 @@ final class AppViewModel: ObservableObject {
 
         usageRecords = usageStore.add(record)
         usageSummary = UsageSummary.from(records: usageRecords)
+        syncGlobalUsageIfNeeded(force: false)
     }
 
     private func openSystemSettings(urlStrings: [String]) -> Bool {
@@ -801,7 +946,7 @@ final class AppViewModel: ObservableObject {
             }
             await MainActor.run {
                 if !self.hasAccessibilityPermission {
-                    self.statusMessage = "Accessibility still not detected in this running app. Relaunch Kiku Dictate, then press Refresh Setup."
+                    self.statusMessage = "Accessibility still not detected in this running app. Relaunch Dataiku Chirp, then press Refresh Setup."
                 }
             }
         }

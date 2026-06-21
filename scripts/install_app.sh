@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-APP_NAME="Kiku Dictate.app"
+APP_NAME="Dataiku Chirp.app"
 SRC_APP="$ROOT_DIR/dist/$APP_NAME"
 ENTITLEMENTS_PLIST="$ROOT_DIR/KikuDictate.entitlements"
 

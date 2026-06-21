@@ -1,6 +1,6 @@
 # Security Model
 
-Kiku Dictate is designed to reduce the amount of sensitive data that exists.
+Dataiku Chirp is designed to reduce the amount of sensitive data that exists.
 
 ## Stored Data
 
@@ -10,6 +10,7 @@ Stored:
 - Launch/floating pill settings.
 - Local engine/model file paths.
 - Aggregate usage records.
+- Optional global usage settings.
 
 Not stored:
 
@@ -19,6 +20,7 @@ Not stored:
 - Active window titles.
 - Clipboard history.
 - API keys.
+- Per-dictation event logs.
 
 ## Prompt Injection Position
 
@@ -38,12 +40,25 @@ Transcription uses `Process.executableURL` and an argument array. It does not bu
 
 ## Network
 
-The app itself has no network transcription path. The install helper downloads the model once, outside app runtime, and can be omitted if IT distributes the model through MDM.
+The app has no network transcription path. The install helper downloads the model once, outside app runtime, and can be omitted if IT distributes the model through MDM.
+
+Global usage sharing is optional and off by default. When enabled, it sends cumulative aggregate counters only:
+
+- installation ID
+- app version
+- model name
+- sessions
+- total words
+- total local transcription minutes
+- estimated time saved
+- estimated vendor spend avoided
+
+It does not send audio, transcript text, clipboard contents, active app names, or active window titles.
 
 ## Residual Risks
 
 - Clipboard content briefly contains the generated transcript so the app can paste.
 - Accessibility permission allows the app to synthesize Cmd+V events.
 - The selected `whisper-cli` binary and model file must be trusted.
+- A pilot Apps Script team key is a shared secret, not full enterprise identity.
 - The local machine can still be compromised by unrelated malware.
-

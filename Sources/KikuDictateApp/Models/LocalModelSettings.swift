@@ -10,10 +10,15 @@ struct LocalModelSettings: Codable, Equatable {
 
     static var `default`: LocalModelSettings {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let modelURL = appSupport
-            .appendingPathComponent("KikuDictate", isDirectory: true)
+        let defaultModelURL = appSupport
+            .appendingPathComponent(AppConstants.appSupportFolder, isDirectory: true)
             .appendingPathComponent("Models", isDirectory: true)
             .appendingPathComponent(defaultModelFileName)
+        let legacyModelURL = appSupport
+            .appendingPathComponent(AppConstants.legacyAppSupportFolder, isDirectory: true)
+            .appendingPathComponent("Models", isDirectory: true)
+            .appendingPathComponent(defaultModelFileName)
+        let modelURL = FileManager.default.fileExists(atPath: defaultModelURL.path) ? defaultModelURL : legacyModelURL
 
         return LocalModelSettings(
             enginePath: Self.firstExistingExecutablePath([
@@ -22,7 +27,7 @@ struct LocalModelSettings: Codable, Equatable {
                 "/opt/homebrew/bin/whisper-cpp",
                 "/usr/local/bin/whisper-cpp"
             ]) ?? "/opt/homebrew/bin/whisper-cli",
-            modelPath: modelURL.path,
+            modelPath: FileManager.default.fileExists(atPath: modelURL.path) ? modelURL.path : defaultModelURL.path,
             modelName: "Whisper large-v3 turbo",
             languageCode: "en"
         )
@@ -44,4 +49,3 @@ struct LocalModelSettings: Codable, Equatable {
         paths.first { FileManager.default.isExecutableFile(atPath: $0) }
     }
 }
-

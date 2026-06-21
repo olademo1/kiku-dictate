@@ -52,7 +52,7 @@ final class LocalWhisperTranscriber {
         }
 
         let outputBase = fileManager.temporaryDirectory
-            .appendingPathComponent("kiku-dictate-\(UUID().uuidString)")
+            .appendingPathComponent("dataiku-chirp-\(UUID().uuidString)")
         let outputText = outputBase.appendingPathExtension("txt")
 
         defer {
@@ -117,4 +117,3 @@ final class LocalWhisperTranscriber {
         return (process.terminationStatus, stdout, stderr)
     }
 }
-

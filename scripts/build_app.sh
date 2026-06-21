@@ -4,11 +4,11 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-APP_NAME="Kiku Dictate"
+APP_NAME="Dataiku Chirp"
 APP_BUNDLE="$APP_NAME.app"
 EXECUTABLE_NAME="KikuDictate"
-BUNDLE_ID="com.dataiku.kikudictate"
-VERSION="0.1.1"
+BUNDLE_ID="com.dataiku.chirp"
+VERSION="0.2.0"
 BUILD_NUMBER="$(date +%Y%m%d%H%M%S)"
 ENTITLEMENTS_PLIST="$ROOT_DIR/KikuDictate.entitlements"
 
@@ -109,9 +109,9 @@ cat > "$INFO_PLIST" <<PLIST
   <key>NSHighResolutionCapable</key>
   <true/>
   <key>NSMicrophoneUsageDescription</key>
-  <string>Kiku Dictate needs microphone access only while you record dictation.</string>
+  <string>Dataiku Chirp needs microphone access only while you record dictation.</string>
   <key>NSAccessibilityUsageDescription</key>
-  <string>Kiku Dictate uses Accessibility only to paste transcribed text into the active app.</string>
+  <string>Dataiku Chirp uses Accessibility only to paste transcribed text into the active app.</string>
   <key>LSApplicationCategoryType</key>
   <string>public.app-category.productivity</string>
   <key>CFBundleIconFile</key>

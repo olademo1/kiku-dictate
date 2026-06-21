@@ -46,7 +46,7 @@ final class AudioRecorder {
         }
 
         let tempDir = FileManager.default.temporaryDirectory
-        let output = tempDir.appendingPathComponent("kiku-dictate-\(UUID().uuidString).wav")
+        let output = tempDir.appendingPathComponent("dataiku-chirp-\(UUID().uuidString).wav")
 
         let settings: [String: Any] = [
             AVFormatIDKey: kAudioFormatLinearPCM,

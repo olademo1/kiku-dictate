@@ -2,8 +2,9 @@
 set -euo pipefail
 
 MODEL_URL="https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo.bin"
-MODEL_DIR="$HOME/Library/Application Support/KikuDictate/Models"
+MODEL_DIR="$HOME/Library/Application Support/DataikuChirp/Models"
 MODEL_PATH="$MODEL_DIR/ggml-large-v3-turbo.bin"
+LEGACY_MODEL_PATH="$HOME/Library/Application Support/KikuDictate/Models/ggml-large-v3-turbo.bin"
 INSTALL_OK=1
 
 detect_active_ipv4() {
@@ -34,13 +35,13 @@ download_with_network_fallback() {
 }
 
 if ! command -v brew >/dev/null 2>&1; then
-  echo "Homebrew was not found. Install whisper-cpp manually, then set the engine path in Kiku Dictate."
+  echo "Homebrew was not found. Install whisper-cpp manually, then set the engine path in Dataiku Chirp."
   INSTALL_OK=0
 elif ! command -v whisper-cli >/dev/null 2>&1; then
   echo "Installing whisper-cpp with Homebrew..."
   if ! HOMEBREW_NO_AUTO_UPDATE="${HOMEBREW_NO_AUTO_UPDATE:-1}" brew install whisper-cpp; then
     echo "WARNING: Homebrew could not install whisper-cpp."
-    echo "You can still use Kiku Dictate after installing whisper-cli through MDM or another trusted channel."
+    echo "You can still use Dataiku Chirp after installing whisper-cli through MDM or another trusted channel."
     INSTALL_OK=0
   fi
 fi
@@ -49,6 +50,10 @@ mkdir -p "$MODEL_DIR"
 
 if [[ -f "$MODEL_PATH" ]]; then
   echo "Model already exists: $MODEL_PATH"
+elif [[ -f "$LEGACY_MODEL_PATH" ]]; then
+  MODEL_PATH="$LEGACY_MODEL_PATH"
+  echo "Existing model found: $MODEL_PATH"
+  echo "Dataiku Chirp will reuse this local model; no download needed."
 else
   echo "Downloading model..."
   if ! download_with_network_fallback "$MODEL_URL" "$MODEL_PATH"; then

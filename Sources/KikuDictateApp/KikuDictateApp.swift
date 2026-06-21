@@ -6,7 +6,7 @@ struct KikuDictateApp: App {
     @StateObject private var viewModel = AppViewModel()
 
     var body: some Scene {
-        WindowGroup("Kiku Dictate") {
+        WindowGroup("Dataiku Chirp") {
             MainView(viewModel: viewModel)
         }
         .defaultSize(width: 740, height: 520)

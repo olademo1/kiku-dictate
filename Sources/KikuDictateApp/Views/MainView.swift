@@ -7,7 +7,11 @@ struct MainView: View {
 
     @State private var enginePathInput = ""
     @State private var modelPathInput = ""
+    @State private var modelNameInput = ""
+    @State private var globalEndpointInput = ""
+    @State private var globalTeamKeyInput = ""
     @State private var showAdvancedRuntime = false
+    @State private var showGlobalUsage = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -34,22 +38,30 @@ struct MainView: View {
         .onAppear {
             enginePathInput = viewModel.localModelSettings.enginePath
             modelPathInput = viewModel.localModelSettings.modelPath
+            modelNameInput = viewModel.localModelSettings.modelName
+            globalEndpointInput = viewModel.globalUsageSettings.endpointURLString
+            globalTeamKeyInput = viewModel.globalUsageSettings.teamKey
             viewModel.refreshSetupStatus(showReadyMessage: false)
             resizeMainWindowToDashboard()
         }
         .onChange(of: viewModel.localModelSettings) { settings in
             enginePathInput = settings.enginePath
             modelPathInput = settings.modelPath
+            modelNameInput = settings.modelName
+        }
+        .onChange(of: viewModel.globalUsageSettings) { settings in
+            globalEndpointInput = settings.endpointURLString
+            globalTeamKeyInput = settings.teamKey
         }
     }
 
     private var header: some View {
         HStack(alignment: .center, spacing: 10) {
-            KikuMark()
+            DataikuChirpMark()
                 .frame(width: 40, height: 40)
 
             VStack(alignment: .leading, spacing: 1) {
-                Text("Kiku Dictate")
+                Text("Dataiku Chirp")
                     .font(.system(size: 22, weight: .bold))
                     .foregroundStyle(Palette.ink)
                 Text("Local voice-to-text for Dataiku teams")
@@ -93,6 +105,20 @@ struct MainView: View {
                     .font(.system(size: 15, weight: .bold))
                     .foregroundStyle(Palette.ink)
                 Spacer()
+                Button {
+                    globalEndpointInput = viewModel.globalUsageSettings.endpointURLString
+                    globalTeamKeyInput = viewModel.globalUsageSettings.teamKey
+                    showGlobalUsage.toggle()
+                } label: {
+                    Label("Team", systemImage: "building.2")
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .popover(isPresented: $showGlobalUsage, arrowEdge: .top) {
+                    globalUsagePopover
+                        .padding(16)
+                        .frame(width: 430)
+                }
                 Text(viewModel.setupComplete ? "Live" : "After setup")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(viewModel.setupComplete ? Palette.green : Palette.orange)
@@ -123,6 +149,86 @@ struct MainView: View {
             Text("Only aggregate counters are stored.")
                 .font(.caption2)
                 .foregroundStyle(Palette.muted)
+        }
+    }
+
+    private var globalUsagePopover: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Label("Team Usage", systemImage: "building.2")
+                    .font(.headline)
+                    .foregroundStyle(Palette.ink)
+                Spacer()
+                if viewModel.isSyncingGlobalUsage {
+                    ProgressView()
+                        .controlSize(.small)
+                }
+            }
+
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], alignment: .leading, spacing: 12) {
+                globalUsageValue("Team words", "\(viewModel.globalUsageSnapshot.totalWords)")
+                globalUsageValue("Active installs", "\(viewModel.globalUsageSnapshot.activeInstallations)")
+                globalUsageValue("Team time saved", formattedHours(viewModel.globalUsageSnapshot.totalTypingHoursSaved))
+                globalUsageValue("Team spend avoided", formattedUSD(viewModel.globalUsageSnapshot.totalVendorCostAvoidedUSD))
+            }
+
+            Divider()
+
+            Toggle("Share my aggregate counters", isOn: Binding(
+                get: { viewModel.globalUsageSettings.enabled },
+                set: { enabled in
+                    saveGlobalUsageInputs()
+                    viewModel.setGlobalUsageSharing(enabled)
+                }
+            ))
+            .toggleStyle(.switch)
+            .controlSize(.small)
+
+            VStack(alignment: .leading, spacing: 8) {
+                TextField("Apps Script web app URL", text: $globalEndpointInput)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.system(size: 11, design: .monospaced))
+
+                SecureField("Team key", text: $globalTeamKeyInput)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.system(size: 11, design: .monospaced))
+            }
+
+            HStack(spacing: 8) {
+                Button {
+                    saveGlobalUsageInputs()
+                } label: {
+                    Label("Save", systemImage: "checkmark")
+                }
+
+                Button {
+                    saveGlobalUsageInputs()
+                    viewModel.syncGlobalUsageNow()
+                } label: {
+                    Label("Sync", systemImage: "arrow.triangle.2.circlepath")
+                }
+                .disabled(viewModel.isSyncingGlobalUsage)
+
+                Button {
+                    saveGlobalUsageInputs()
+                    viewModel.refreshGlobalUsage()
+                } label: {
+                    Label("Refresh", systemImage: "arrow.clockwise")
+                }
+                .disabled(viewModel.isSyncingGlobalUsage)
+
+                Spacer()
+            }
+            .controlSize(.small)
+
+            Label("Aggregate only: no audio or transcript text.", systemImage: "lock.shield")
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(Palette.green)
+
+            Text(viewModel.globalUsageStatus)
+                .font(.caption2)
+                .foregroundStyle(Palette.muted)
+                .lineLimit(2)
         }
     }
 
@@ -283,6 +389,13 @@ struct MainView: View {
             Text("Model file: \(viewModel.modelFileName) (\(viewModel.modelSizeDescription))")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(Palette.ink)
+
+            pathRow(
+                title: "Name",
+                value: $modelNameInput,
+                ready: true,
+                save: { viewModel.updateModelName(modelNameInput) }
+            )
 
             pathRow(
                 title: "Engine",
@@ -484,6 +597,25 @@ struct MainView: View {
         .frame(minHeight: 44, alignment: .leading)
     }
 
+    private func globalUsageValue(_ label: String, _ value: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(Palette.muted)
+            Text(value)
+                .font(.system(size: 20, weight: .bold))
+                .foregroundStyle(Palette.ink)
+                .lineLimit(1)
+                .minimumScaleFactor(0.65)
+        }
+        .frame(minHeight: 40, alignment: .leading)
+    }
+
+    private func saveGlobalUsageInputs() {
+        viewModel.updateGlobalUsageEndpoint(globalEndpointInput)
+        viewModel.updateGlobalUsageTeamKey(globalTeamKeyInput)
+    }
+
     private func formattedDuration(_ seconds: TimeInterval) -> String {
         let total = max(Int(seconds), 0)
         let minutes = total / 60
@@ -507,7 +639,7 @@ struct MainView: View {
 
     private func resizeMainWindowToDashboard() {
         DispatchQueue.main.async {
-            guard let window = NSApp.windows.first(where: { $0.title.contains("Kiku Dictate") }) else {
+            guard let window = NSApp.windows.first(where: { $0.title.contains("Dataiku Chirp") }) else {
                 return
             }
 
@@ -530,8 +662,20 @@ private enum Palette {
     static let blue = Color(red: 0.16, green: 0.33, blue: 0.76)
 }
 
-private struct KikuMark: View {
+private struct DataikuChirpMark: View {
     var body: some View {
+        Group {
+            if let image = NSImage(named: "AppIcon") {
+                Image(nsImage: image)
+                    .resizable()
+                    .scaledToFit()
+            } else {
+                fallbackMark
+            }
+        }
+    }
+
+    private var fallbackMark: some View {
         GeometryReader { proxy in
             let size = min(proxy.size.width, proxy.size.height)
 

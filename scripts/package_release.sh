@@ -2,14 +2,14 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-APP_PATH="/Applications/Kiku Dictate.app"
+APP_PATH="/Applications/Dataiku Chirp.app"
 if [[ ! -d "$APP_PATH" ]]; then
-  APP_PATH="$HOME/Applications/Kiku Dictate.app"
+  APP_PATH="$HOME/Applications/Dataiku Chirp.app"
 fi
 
 RELEASE_DIR="$ROOT_DIR/releases"
 STAMP="$(date +%Y%m%d-%H%M%S)"
-ZIP_PATH="$RELEASE_DIR/KikuDictate-macOS-$STAMP.zip"
+ZIP_PATH="$RELEASE_DIR/DataikuChirp-macOS-$STAMP.zip"
 SHA_PATH="$ZIP_PATH.sha256"
 
 mkdir -p "$RELEASE_DIR"

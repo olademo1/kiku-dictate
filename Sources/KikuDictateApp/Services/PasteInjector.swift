@@ -10,7 +10,7 @@ enum PasteInjectorError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .accessibilityPermissionRequired:
-            return "Enable Accessibility for Kiku Dictate to paste automatically."
+            return "Enable Accessibility for Dataiku Chirp to paste automatically."
         case .eventSourceUnavailable:
             return "Could not create an input event source for auto-paste."
         case .pasteShortcutUnavailable:

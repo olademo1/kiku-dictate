@@ -1,6 +1,6 @@
-# Kiku Dictate
+# Dataiku Chirp
 
-Kiku Dictate is a local-first macOS voice-to-text prototype for Dataiku-style internal use. It keeps the CrispyDough workflow shape: global hotkey, push-to-talk or toggle recording, floating pill, launch at login, auto-paste, and usage/savings estimates.
+Dataiku Chirp is a local-first macOS voice-to-text prototype for Dataiku-style internal use. It keeps the CrispyDough workflow shape: global hotkey, push-to-talk or toggle recording, floating pill, launch at login, auto-paste, and usage/savings estimates.
 
 The major difference is the security model: there is no OpenAI API key, no prompt field, no transcript history, and no network transcription path. Audio is recorded to a temporary local WAV file, passed to a local `whisper.cpp` binary, then deleted.
 
@@ -10,21 +10,22 @@ The major difference is the security model: there is no OpenAI API key, no promp
 - Uses local `whisper-cli` with a local Whisper model file.
 - Default target model: `ggml-large-v3-turbo.bin`.
 - Stores only aggregate usage metrics.
+- Optional global usage dashboard sends cumulative aggregate counters only.
 - Ships as a downloadable `.zip` release artifact for testers.
 - Builds without network access or third-party Swift dependencies.
 
 ## Download For Testers
 
-Go to the repo's [Releases page](https://github.com/olademo1/kiku-dictate/releases), download the latest `KikuDictate-macOS-*.zip`, unzip it, then drag `Kiku Dictate.app` into `/Applications`.
+Go to the repo's [Releases page](https://github.com/olademo1/kiku-dictate/releases), download the latest `DataikuChirp-macOS-*.zip`, unzip it, then drag `Dataiku Chirp.app` into `/Applications`.
 
 On first launch:
 
-1. Open `Kiku Dictate.app`.
+1. Open `Dataiku Chirp.app`.
 2. Allow microphone access.
 3. Enable Accessibility only if you want automatic paste into the active app.
 4. Press the configured shortcut or the `Record` button.
 
-If macOS blocks the app because it has not been notarized yet, open it from Finder by right-clicking `Kiku Dictate.app` and choosing `Open`. This prototype is Developer ID signed locally but not yet notarized for broad external distribution.
+If macOS blocks the app because it has not been notarized yet, open it from Finder by right-clicking `Dataiku Chirp.app` and choosing `Open`. This prototype is Developer ID signed locally but not yet notarized for broad external distribution.
 
 ## Setup
 
@@ -38,16 +39,18 @@ cd "/Users/rotimilademo/Documents/New project/KikuDictate"
 The model file is large and is intentionally not committed to git. The helper installs it to:
 
 ```text
-~/Library/Application Support/KikuDictate/Models/ggml-large-v3-turbo.bin
+~/Library/Application Support/DataikuChirp/Models/ggml-large-v3-turbo.bin
 ```
 
 ## Cost And Model Notes
 
 When the model and `whisper-cli` are running locally, transcription has no per-minute API fee. It is not literally cost-free: users still pay with local CPU/GPU time, battery, storage, IT packaging, support, and security review. For an internal rollout, that usually means the marginal transcription cost is effectively zero after the model is distributed.
 
-The in-app `Spend avoided` number is therefore an estimate of vendor transcription spend avoided, not profit or fully loaded ROI. The default estimate uses the avoided API spend assumption in `UsagePricing.swift`, while `Time saved` estimates typing time avoided from aggregate word counts. Kiku stores only those aggregate counters, not transcript text.
+The in-app `Spend avoided` number is therefore an estimate of vendor transcription spend avoided, not profit or fully loaded ROI. The default estimate uses the avoided API spend assumption in `UsagePricing.swift`, while `Time saved` estimates typing time avoided from aggregate word counts. Dataiku Chirp stores only those aggregate counters, not transcript text.
 
 The default model is `ggml-large-v3-turbo.bin`, which is about 1.62 GB in the upstream `whisper.cpp` model repository. The full `ggml-large-v3.bin` model is about 3.1 GB and may be more accurate in some cases, but it is slower and heavier. Quantized turbo options are smaller, but the default keeps quality higher for a company-wide writing tool.
+
+Future local models can be selected without a code change through `Advanced Runtime`. See [docs/model-management.md](docs/model-management.md).
 
 OpenAI's Whisper code and model weights are released under the MIT License, and `whisper.cpp` is also MIT licensed. Dataiku legal/security should still review the exact artifacts before distribution:
 
@@ -65,7 +68,7 @@ swift build
 The packaged app is written to:
 
 ```text
-dist/Kiku Dictate.app
+dist/Dataiku Chirp.app
 ```
 
 ## Security Defaults
@@ -77,6 +80,13 @@ dist/Kiku Dictate.app
 - No shell interpolation for transcription commands.
 - Temporary audio deleted after transcription or failure.
 - Usage metrics are aggregate-only: seconds, word count, estimated time saved, estimated vendor cost avoided.
+- Optional team stats send cumulative aggregate counters only and are off by default.
+
+## Global Usage
+
+The `Usage > Team` popover can connect to a Google Apps Script web app for pilot-wide totals. The recommended design stores one row per laptop and updates that row with cumulative counters, so 1,000 employees remain roughly 1,000 rows instead of a per-dictation event stream.
+
+Use `integrations/google-apps-script/global_usage.gs` and follow [docs/global-usage-google-apps-script.md](docs/global-usage-google-apps-script.md).
 
 ## Shortcut Notes
 
@@ -94,4 +104,4 @@ The verifier checks that the app builds and that removed cloud/prompt/history su
 
 ## Notes
 
-This is an internal prototype name and not an official Dataiku product name. Before company distribution, update the bundle ID, signing identity, deployment path, and legal review notes.
+Before company distribution, confirm the bundle ID, signing identity, deployment path, name approval, and legal review notes.

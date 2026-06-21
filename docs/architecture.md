@@ -1,7 +1,7 @@
 # Architecture
 
 ```text
-Kiku Dictate.app
+Dataiku Chirp.app
   SwiftUI settings window
   AppKit floating pill
   Carbon global hotkey monitor
@@ -15,6 +15,9 @@ Kiku Dictate.app
     -> Cmd+V event when Accessibility is enabled
   UsageStore
     -> aggregate JSON metrics only
+  GlobalUsageClient (optional)
+    -> cumulative aggregate counters only
+    -> no transcript text or audio
 ```
 
 ## Data Flow
@@ -26,6 +29,7 @@ Kiku Dictate.app
 5. The app trims the result, counts words, and pastes/copies it.
 6. The app deletes temporary audio and temporary transcript files.
 7. The app stores only usage counters.
+8. If team stats sharing is enabled, the app periodically posts cumulative aggregate counters for this install.
 
 ## Trust Boundary
 
@@ -42,3 +46,4 @@ The app does not trust or call:
 - Remote transcription services.
 - Prompt-based correction services.
 
+The optional global usage endpoint is outside the transcription trust boundary. It receives cumulative counters only and is off by default.
