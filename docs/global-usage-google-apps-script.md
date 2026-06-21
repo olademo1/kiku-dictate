@@ -1,13 +1,13 @@
 # Global Usage With Google Apps Script
 
-Dataiku Chirp can report opt-in aggregate counters to a Google Apps Script web app. The app never sends audio, transcript text, active window titles, clipboard contents, or per-dictation rows.
+Dataiku Chirp can report aggregate counters to a Google Apps Script web app. New installs default to sharing on, but setup requires a team selection before anything syncs and users can turn sharing off. The app never sends audio, transcript text, active window titles, clipboard contents, or per-dictation rows.
 
 ## Recommended Pilot Design
 
 Use a cumulative upsert model:
 
 1. Each laptop gets one random `installationId`.
-2. The user chooses a broad team from the app dropdown.
+2. The user chooses a broad team from the app dropdown. Until then, the local app treats the install as `Unidentified` and does not sync.
 3. The app sends cumulative totals for that install: team, sessions, total words, total local transcription minutes, estimated typing time saved, and estimated vendor spend avoided.
 4. Apps Script stores one row per install in a Google Sheet.
 5. The dashboard sums the rows.
@@ -33,11 +33,11 @@ Sources:
 4. In Apps Script, open `Project Settings > Script properties`.
 5. Add `SPREADSHEET_ID` with the Google Sheet ID.
 6. Add `TEAM_KEY` with a long random value.
-7. Run `setup` once.
+7. Run `setup` once. This creates or refreshes the `Installations`, `Summary`, and `Teams` tabs, including the `Unidentified` team row.
 8. Deploy as a web app with execute-as `Me` and access `Anyone`.
 9. Build Dataiku Chirp with `DATAIKU_CHIRP_USAGE_ENDPOINT` and `DATAIKU_CHIRP_USAGE_TEAM_KEY` set.
 
-The app UI does not expose the endpoint URL or team key. Users only choose their team and toggle aggregate sharing.
+The app UI does not expose the endpoint URL or team key. Users only choose their team and can turn aggregate sharing off.
 
 For the native Mac app to POST without Google OAuth, the Apps Script web app needs link-level access. The `TEAM_KEY` check prevents accidental public reads and writes, but it is shared-secret security rather than enterprise auth.
 

@@ -80,11 +80,11 @@ dist/Dataiku Chirp.app
 - No shell interpolation for transcription commands.
 - Temporary audio deleted after transcription or failure.
 - Usage metrics are aggregate-only: seconds, word count, estimated time saved, estimated vendor cost avoided.
-- Optional team stats send cumulative aggregate counters only and are off by default.
+- Team stats send cumulative aggregate counters only. New installs start with sharing on, but setup requires a team selection before anything can sync.
 
 ## Global Usage
 
-The `Usage > Team` popover connects to the configured Google Apps Script web app for pilot-wide totals. Users choose a broad team from a dropdown and decide whether to share aggregate counters. They do not paste an endpoint URL or key.
+The `Usage > Team` popover connects to the configured Google Apps Script web app for pilot-wide totals. New installs default to sharing aggregate counters, require the user to choose a broad team before sync, and still let users turn sharing off. Users do not paste an endpoint URL or key.
 
 The recommended design stores one row per laptop and updates that row with cumulative counters, so 1,000 employees remain roughly 1,000 rows instead of a per-dictation event stream.
 

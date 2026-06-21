@@ -1,4 +1,6 @@
 const SHEET_NAME = 'Installations';
+const SUMMARY_SHEET_NAME = 'Summary';
+const TEAMS_SHEET_NAME = 'Teams';
 const ACTIVE_WINDOW_DAYS = 30;
 const HEADERS = [
   'installationId',
@@ -12,9 +14,25 @@ const HEADERS = [
   'totalTypingHoursSaved',
   'totalVendorCostAvoidedUSD'
 ];
+const TEAM_NAMES = [
+  'Engineering',
+  'Product',
+  'Go-to-Market',
+  'Customer',
+  'Marketing',
+  'Finance',
+  'People',
+  'Legal',
+  'IT/Security',
+  'Operations',
+  'Strategy',
+  'Unidentified'
+];
 
 function setup() {
   ensureSheet_();
+  ensureTeamsSheet_();
+  ensureSummarySheet_();
 }
 
 function doPost(e) {
@@ -83,6 +101,73 @@ function ensureSheet_() {
     sheet.setFrozenRows(1);
   }
 
+  return sheet;
+}
+
+function ensureTeamsSheet_() {
+  const spreadsheet = spreadsheet_();
+  let sheet = spreadsheet.getSheetByName(TEAMS_SHEET_NAME);
+  if (!sheet) {
+    sheet = spreadsheet.insertSheet(TEAMS_SHEET_NAME);
+  }
+
+  sheet.getRange(1, 1, 1, 1).setValue('Team');
+  sheet.getRange(2, 1, TEAM_NAMES.length, 1).setValues(TEAM_NAMES.map((team) => [team]));
+  sheet.setFrozenRows(1);
+  sheet.getRange(1, 1, 1, 1)
+    .setFontWeight('bold')
+    .setFontColor('#ffffff')
+    .setBackground('#111827');
+  sheet.autoResizeColumn(1);
+  return sheet;
+}
+
+function ensureSummarySheet_() {
+  const spreadsheet = spreadsheet_();
+  let sheet = spreadsheet.getSheetByName(SUMMARY_SHEET_NAME);
+  if (!sheet) {
+    sheet = spreadsheet.insertSheet(SUMMARY_SHEET_NAME, 0);
+  }
+
+  const summaryRows = [
+    ['Dataiku Chirp Usage', '', '', '', ''],
+    ['Aggregate counters only. No audio or transcript text is collected.', '', '', '', ''],
+    ['', '', '', '', ''],
+    ['Active installs', '=COUNTIF(Installations!$C$2:$C$1001,">="&TODAY()-30)', '', '', ''],
+    ['Total sessions', '=SUM(Installations!$F$2:$F$1001)', '', '', ''],
+    ['Total words', '=SUM(Installations!$G$2:$G$1001)', '', '', ''],
+    ['Team time saved', '=SUM(Installations!$I$2:$I$1001)', '', '', ''],
+    ['Spend avoided', '=SUM(Installations!$J$2:$J$1001)', '', '', ''],
+    ['', '', '', '', ''],
+    ['', '', '', '', ''],
+    ['Team', 'Active installs', 'Words', 'Hours saved', 'Spend avoided']
+  ];
+
+  const teamRows = TEAM_NAMES.map((team, index) => {
+    const rowNumber = 12 + index;
+    return [
+      team,
+      `=COUNTIFS(Installations!$B$2:$B$1001,A${rowNumber},Installations!$C$2:$C$1001,">="&TODAY()-30)`,
+      `=SUMIFS(Installations!$G$2:$G$1001,Installations!$B$2:$B$1001,A${rowNumber})`,
+      `=SUMIFS(Installations!$I$2:$I$1001,Installations!$B$2:$B$1001,A${rowNumber})`,
+      `=SUMIFS(Installations!$J$2:$J$1001,Installations!$B$2:$B$1001,A${rowNumber})`
+    ];
+  });
+
+  sheet.getRange(1, 1, summaryRows.length, 5).setValues(summaryRows);
+  sheet.getRange(12, 1, teamRows.length, 5).setValues(teamRows);
+  sheet.getRange('A1').setFontSize(22).setFontWeight('bold').setFontColor('#111827');
+  sheet.getRange('A2').setFontColor('#5f6670');
+  sheet.getRange('A4:B8').setBackground('#fffef8').setFontWeight('bold');
+  sheet.getRange('A11:E11').setFontWeight('bold').setFontColor('#ffffff').setBackground('#111827');
+  sheet.getRange(12, 1, TEAM_NAMES.length, 5).setBackground('#fffef8');
+  sheet.getRange('B4:B7').setNumberFormat('#,##0.0');
+  sheet.getRange('B8').setNumberFormat('$#,##0.00');
+  sheet.getRange(12, 2, TEAM_NAMES.length, 3).setNumberFormat('#,##0.0');
+  sheet.getRange(12, 5, TEAM_NAMES.length, 1).setNumberFormat('$#,##0.00');
+  sheet.setFrozenRows(0);
+  sheet.setHiddenGridlines(true);
+  sheet.autoResizeColumns(1, 5);
   return sheet;
 }
 
