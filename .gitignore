@@ -1,0 +1,25 @@
+# SwiftPM
+.build/
+.build.old*/
+
+# Build outputs
+/dist/
+/releases/
+
+# Local speech models
+*.bin
+*.gguf
+*.mlmodelc/
+/Models/
+
+# Temporary / recovery
+/tmp_unreadable/
+
+# macOS
+.DS_Store
+
+# Xcode
+*.xcuserstate
+*.xcscmblueprint
+*.xccheckout
+DerivedData/
