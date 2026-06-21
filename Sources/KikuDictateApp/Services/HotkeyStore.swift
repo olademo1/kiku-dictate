@@ -15,6 +15,11 @@ final class HotkeyStore {
             return .default
         }
 
+        guard value.isValidGlobalShortcut else {
+            save(.default)
+            return .default
+        }
+
         return value
     }
 

@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP_NAME="Kiku Dictate.app"
 SRC_APP="$ROOT_DIR/dist/$APP_NAME"
+ENTITLEMENTS_PLIST="$ROOT_DIR/KikuDictate.entitlements"
 
 if [[ ! -d "$SRC_APP" ]]; then
   echo "ERROR: $SRC_APP not found. Run: $ROOT_DIR/scripts/build_app.sh"
@@ -29,6 +30,11 @@ xattr -dr com.apple.quarantine "$DEST_APP" >/dev/null 2>&1 || true
 
 if command -v codesign >/dev/null 2>&1; then
   SIGN_IDENTITY=""
+  CODESIGN_ENTITLEMENTS=()
+  if [[ -f "$ENTITLEMENTS_PLIST" ]]; then
+    CODESIGN_ENTITLEMENTS=(--entitlements "$ENTITLEMENTS_PLIST")
+  fi
+
   if command -v security >/dev/null 2>&1; then
     SIGN_IDENTITY="$(security find-identity -p codesigning -v 2>/dev/null | awk -F'\"' '/Developer ID Application:/{print $2; exit}')"
     if [[ -z "$SIGN_IDENTITY" ]]; then
@@ -38,10 +44,10 @@ if command -v codesign >/dev/null 2>&1; then
 
   if [[ -n "$SIGN_IDENTITY" ]]; then
     echo "Signing installed app with identity: $SIGN_IDENTITY"
-    codesign --force --deep --options runtime --sign "$SIGN_IDENTITY" "$DEST_APP"
+    codesign --force --deep --options runtime "${CODESIGN_ENTITLEMENTS[@]}" --sign "$SIGN_IDENTITY" "$DEST_APP"
   else
     echo "Signing installed app ad-hoc."
-    codesign --force --deep --sign - "$DEST_APP"
+    codesign --force --deep "${CODESIGN_ENTITLEMENTS[@]}" --sign - "$DEST_APP"
   fi
 
   codesign --verify --deep --strict --verbose=2 "$DEST_APP"

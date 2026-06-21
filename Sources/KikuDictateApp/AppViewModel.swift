@@ -205,7 +205,7 @@ final class AppViewModel: ObservableObject {
     }
 
     func hotkeyCaptureInvalid() {
-        statusMessage = "That key cannot be used as a global hotkey. Try another key."
+        statusMessage = "Use a shortcut with Control, Option, or Command."
     }
 
     func setPersistentStartMode(_ mode: PersistentStartMode) {
@@ -739,4 +739,3 @@ final class AppViewModel: ObservableObject {
         }
     }
 }
-

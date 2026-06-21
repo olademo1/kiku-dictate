@@ -10,6 +10,7 @@ EXECUTABLE_NAME="KikuDictate"
 BUNDLE_ID="com.dataiku.kikudictate"
 VERSION="0.1.0"
 BUILD_NUMBER="$(date +%Y%m%d%H%M%S)"
+ENTITLEMENTS_PLIST="$ROOT_DIR/KikuDictate.entitlements"
 
 echo "Building release binary..."
 swift build -c release
@@ -121,6 +122,11 @@ PLIST
 
 if command -v codesign >/dev/null 2>&1; then
   SIGN_IDENTITY=""
+  CODESIGN_ENTITLEMENTS=()
+  if [[ -f "$ENTITLEMENTS_PLIST" ]]; then
+    CODESIGN_ENTITLEMENTS=(--entitlements "$ENTITLEMENTS_PLIST")
+  fi
+
   if command -v security >/dev/null 2>&1; then
     SIGN_IDENTITY="$(security find-identity -p codesigning -v 2>/dev/null | awk -F'\"' '/Developer ID Application:/{print $2; exit}')"
     if [[ -z "$SIGN_IDENTITY" ]]; then
@@ -131,11 +137,11 @@ if command -v codesign >/dev/null 2>&1; then
   if [[ -n "$SIGN_IDENTITY" ]]; then
     echo "Signing with identity: $SIGN_IDENTITY"
     xattr -cr "$STAGED_APP" >/dev/null 2>&1 || true
-    codesign --force --deep --options runtime --sign "$SIGN_IDENTITY" "$STAGED_APP"
+    codesign --force --deep --options runtime "${CODESIGN_ENTITLEMENTS[@]}" --sign "$SIGN_IDENTITY" "$STAGED_APP"
   else
     echo "Signing ad-hoc."
     xattr -cr "$STAGED_APP" >/dev/null 2>&1 || true
-    codesign --force --deep --sign - "$STAGED_APP"
+    codesign --force --deep "${CODESIGN_ENTITLEMENTS[@]}" --sign - "$STAGED_APP"
   fi
 
   codesign --verify --deep --strict --verbose=2 "$STAGED_APP"

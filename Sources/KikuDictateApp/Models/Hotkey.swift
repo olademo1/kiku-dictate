@@ -3,18 +3,36 @@ import Carbon
 
 struct Hotkey: Codable, Equatable {
     private static let fnModifierMask: UInt32 = UInt32(kEventKeyModifierFnMask)
+    private static let functionKeyCodes: Set<UInt32> = [
+        UInt32(kVK_F1), UInt32(kVK_F2), UInt32(kVK_F3), UInt32(kVK_F4),
+        UInt32(kVK_F5), UInt32(kVK_F6), UInt32(kVK_F7), UInt32(kVK_F8),
+        UInt32(kVK_F9), UInt32(kVK_F10), UInt32(kVK_F11), UInt32(kVK_F12),
+        UInt32(kVK_F13), UInt32(kVK_F14), UInt32(kVK_F15), UInt32(kVK_F16),
+        UInt32(kVK_F17), UInt32(kVK_F18), UInt32(kVK_F19), UInt32(kVK_F20)
+    ]
 
     var keyCode: UInt32
     var modifiers: UInt32
 
     static let `default` = Hotkey(
-        keyCode: UInt32(kVK_ANSI_Semicolon),
-        modifiers: UInt32(cmdKey | optionKey)
+        keyCode: UInt32(kVK_Space),
+        modifiers: UInt32(optionKey)
     )
 
+    var isValidGlobalShortcut: Bool {
+        let commandLikeModifiers = modifiers & UInt32(cmdKey | optionKey | controlKey)
+        let isFunctionKey = Self.functionKeyCodes.contains(keyCode)
+
+        if isFunctionKey {
+            return true
+        }
+
+        return commandLikeModifiers != 0
+    }
+
     var displayValue: String {
-        let parts = modifierSymbols + [keyDisplay]
-        return parts.joined()
+        let parts = modifierNames + [keyDisplay]
+        return parts.joined(separator: " ")
     }
 
     var modifierFlags: NSEvent.ModifierFlags {
@@ -27,14 +45,14 @@ struct Hotkey: Codable, Equatable {
         return flags
     }
 
-    private var modifierSymbols: [String] {
-        var symbols: [String] = []
-        if modifiers & UInt32(controlKey) != 0 { symbols.append("⌃") }
-        if modifiers & UInt32(optionKey) != 0 { symbols.append("⌥") }
-        if modifiers & UInt32(shiftKey) != 0 { symbols.append("⇧") }
-        if modifiers & UInt32(cmdKey) != 0 { symbols.append("⌘") }
-        if modifiers & Hotkey.fnModifierMask != 0 { symbols.append("fn") }
-        return symbols
+    private var modifierNames: [String] {
+        var names: [String] = []
+        if modifiers & UInt32(controlKey) != 0 { names.append("Control") }
+        if modifiers & UInt32(optionKey) != 0 { names.append("Option") }
+        if modifiers & UInt32(shiftKey) != 0 { names.append("Shift") }
+        if modifiers & UInt32(cmdKey) != 0 { names.append("Command") }
+        if modifiers & Hotkey.fnModifierMask != 0 { names.append("Fn") }
+        return names
     }
 
     private var keyDisplay: String {
@@ -120,6 +138,7 @@ struct Hotkey: Codable, Equatable {
         if relevantFlags.contains(.control) { modifiers |= UInt32(controlKey) }
         if relevantFlags.contains(.function) { modifiers |= Hotkey.fnModifierMask }
 
-        return Hotkey(keyCode: keyCode, modifiers: modifiers)
+        let hotkey = Hotkey(keyCode: keyCode, modifiers: modifiers)
+        return hotkey.isValidGlobalShortcut ? hotkey : nil
     }
 }

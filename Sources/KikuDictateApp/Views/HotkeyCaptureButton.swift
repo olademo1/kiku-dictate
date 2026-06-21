@@ -13,7 +13,7 @@ struct HotkeyCaptureButton: View {
 
     var body: some View {
         Button(action: toggleCapture) {
-            Text(isCapturing ? "Press new shortcut..." : currentHotkey.displayValue)
+            Text(isCapturing ? "Press shortcut..." : currentHotkey.displayValue)
                 .font(.system(size: 14, weight: .medium, design: .rounded))
                 .frame(minWidth: 180)
                 .padding(.vertical, 8)
