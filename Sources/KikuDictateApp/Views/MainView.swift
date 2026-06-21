@@ -60,7 +60,7 @@ struct MainView: View {
     private var header: some View {
         HStack(alignment: .center, spacing: 10) {
             DataikuChirpMark()
-                .frame(width: 58, height: 50)
+                .frame(width: 70, height: 56)
 
             VStack(alignment: .leading, spacing: 1) {
                 Text("Dataiku Chirp")
