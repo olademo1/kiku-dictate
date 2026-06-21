@@ -8,7 +8,7 @@ APP_NAME="Kiku Dictate"
 APP_BUNDLE="$APP_NAME.app"
 EXECUTABLE_NAME="KikuDictate"
 BUNDLE_ID="com.dataiku.kikudictate"
-VERSION="0.1.0"
+VERSION="0.1.1"
 BUILD_NUMBER="$(date +%Y%m%d%H%M%S)"
 ENTITLEMENTS_PLIST="$ROOT_DIR/KikuDictate.entitlements"
 

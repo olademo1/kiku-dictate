@@ -7,7 +7,7 @@ final class OverlayWindowController: NSWindowController {
 
     init(viewModel: AppViewModel) {
         panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 150, height: 34),
+            contentRect: NSRect(x: 0, y: 0, width: 184, height: 48),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
@@ -15,7 +15,7 @@ final class OverlayWindowController: NSWindowController {
 
         panel.isOpaque = false
         panel.backgroundColor = .clear
-        panel.hasShadow = true
+        panel.hasShadow = false
         panel.level = .floating
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
         panel.hidesOnDeactivate = false
@@ -59,8 +59,8 @@ final class OverlayWindowController: NSWindowController {
         guard let screen = NSScreen.main else { return }
         let frame = screen.visibleFrame
 
-        let width: CGFloat = 150
-        let height: CGFloat = 34
+        let width: CGFloat = 184
+        let height: CGFloat = 48
         let x = frame.midX - (width / 2)
         let y = frame.minY + 24
 
