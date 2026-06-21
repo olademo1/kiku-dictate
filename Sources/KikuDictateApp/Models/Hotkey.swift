@@ -16,7 +16,7 @@ struct Hotkey: Codable, Equatable {
 
     static let `default` = Hotkey(
         keyCode: UInt32(kVK_Space),
-        modifiers: UInt32(optionKey)
+        modifiers: UInt32(controlKey)
     )
 
     var isValidGlobalShortcut: Bool {
@@ -49,8 +49,8 @@ struct Hotkey: Codable, Equatable {
         var names: [String] = []
         if modifiers & UInt32(controlKey) != 0 { names.append("Control") }
         if modifiers & UInt32(optionKey) != 0 { names.append("Option") }
-        if modifiers & UInt32(shiftKey) != 0 { names.append("Shift") }
         if modifiers & UInt32(cmdKey) != 0 { names.append("Command") }
+        if modifiers & UInt32(shiftKey) != 0 { names.append("Shift") }
         if modifiers & Hotkey.fnModifierMask != 0 { names.append("Fn") }
         return names
     }

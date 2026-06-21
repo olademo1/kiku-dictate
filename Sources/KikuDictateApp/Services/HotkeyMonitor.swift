@@ -68,6 +68,7 @@ final class HotkeyMonitor {
         )
 
         guard registerStatus == noErr else {
+            unregister()
             throw NSError(domain: "HotkeyMonitor", code: Int(registerStatus))
         }
     }

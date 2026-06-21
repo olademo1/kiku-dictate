@@ -1,5 +1,6 @@
-import SwiftUI
+import AppKit
 import Carbon
+import SwiftUI
 
 struct HotkeyCaptureButton: View {
     let currentHotkey: Hotkey
@@ -8,41 +9,56 @@ struct HotkeyCaptureButton: View {
     let onInvalidCapture: () -> Void
 
     @State private var isCapturing = false
-    @State private var localMonitor: Any?
-    @State private var globalMonitor: Any?
 
     var body: some View {
-        Button(action: toggleCapture) {
-            Text(isCapturing ? "Press shortcut..." : currentHotkey.displayValue)
-                .font(.system(size: 14, weight: .medium, design: .rounded))
-                .frame(minWidth: 180)
-                .padding(.vertical, 8)
+        Group {
+            if isCapturing {
+                HStack(spacing: 8) {
+                    Image(systemName: "keyboard")
+                        .foregroundStyle(.orange)
+                    Text("Press shortcut...")
+                        .font(.system(size: 12, weight: .semibold))
+                    Spacer(minLength: 8)
+                    Button("Cancel") {
+                        stopCapture()
+                    }
+                    .buttonStyle(.borderless)
+                    .controlSize(.small)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 7)
+                .frame(width: 190)
+                .background(RoundedRectangle(cornerRadius: 6).fill(Color.orange.opacity(0.12)))
+                .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.orange.opacity(0.55)))
+                .background(ShortcutCaptureView(onKeyDown: capture(event:)).frame(width: 0, height: 0))
+            } else {
+                HStack(spacing: 8) {
+                    Text(currentHotkey.displayValue)
+                        .font(.system(size: 12, weight: .semibold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.78)
+                    Spacer(minLength: 8)
+                    Button("Change") {
+                        startCapture()
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .frame(width: 190)
+                .background(RoundedRectangle(cornerRadius: 6).fill(Color.white))
+                .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.black.opacity(0.12)))
+            }
         }
-        .buttonStyle(.borderedProminent)
-        .tint(isCapturing ? .orange : .accentColor)
         .onDisappear {
             stopCapture()
-        }
-    }
-
-    private func toggleCapture() {
-        if isCapturing {
-            stopCapture()
-        } else {
-            startCapture()
         }
     }
 
     private func startCapture() {
         isCapturing = true
         onCaptureStateChange(true)
-        localMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { event in
-            capture(event: event)
-            return nil
-        }
-        globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.keyDown]) { event in
-            capture(event: event)
-        }
     }
 
     private func capture(event: NSEvent) {
@@ -51,7 +67,6 @@ struct HotkeyCaptureButton: View {
             return
         }
 
-        // Ignore modifier-only key presses while capturing.
         if [UInt16(kVK_Command), UInt16(kVK_RightCommand),
             UInt16(kVK_Shift), UInt16(kVK_RightShift),
             UInt16(kVK_Control), UInt16(kVK_RightControl),
@@ -71,15 +86,48 @@ struct HotkeyCaptureButton: View {
     }
 
     private func stopCapture() {
+        guard isCapturing else { return }
         isCapturing = false
-        if let localMonitor {
-            NSEvent.removeMonitor(localMonitor)
-            self.localMonitor = nil
-        }
-        if let globalMonitor {
-            NSEvent.removeMonitor(globalMonitor)
-            self.globalMonitor = nil
-        }
         onCaptureStateChange(false)
+    }
+}
+
+private struct ShortcutCaptureView: NSViewRepresentable {
+    let onKeyDown: (NSEvent) -> Void
+
+    func makeNSView(context: Context) -> CaptureNSView {
+        let view = CaptureNSView()
+        view.onKeyDown = onKeyDown
+        return view
+    }
+
+    func updateNSView(_ nsView: CaptureNSView, context: Context) {
+        nsView.onKeyDown = onKeyDown
+        DispatchQueue.main.async {
+            nsView.window?.makeFirstResponder(nsView)
+        }
+    }
+
+    final class CaptureNSView: NSView {
+        var onKeyDown: ((NSEvent) -> Void)?
+
+        override var acceptsFirstResponder: Bool { true }
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            DispatchQueue.main.async {
+                self.window?.makeFirstResponder(self)
+            }
+        }
+
+        override func keyDown(with event: NSEvent) {
+            onKeyDown?(event)
+        }
+
+        override func performKeyEquivalent(with event: NSEvent) -> Bool {
+            guard event.type == .keyDown else { return false }
+            onKeyDown?(event)
+            return true
+        }
     }
 }

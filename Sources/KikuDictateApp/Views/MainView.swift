@@ -1,4 +1,5 @@
 import Carbon
+import AppKit
 import SwiftUI
 
 struct MainView: View {
@@ -9,26 +10,32 @@ struct MainView: View {
     @State private var showAdvancedRuntime = false
 
     var body: some View {
-        ScrollView(.vertical, showsIndicators: true) {
-            VStack(alignment: .leading, spacing: 18) {
-                header
-                primaryPanel
-                setupSection
-                preferencesSection
-                usageSection
-                trustSection
-                advancedRuntimeSection
-                statusSection
+        VStack(alignment: .leading, spacing: 10) {
+            header
+
+            HStack(alignment: .top, spacing: 10) {
+                usagePanel
+                    .frame(width: 312)
+
+                VStack(alignment: .leading, spacing: 10) {
+                    setupPanel
+                    preferencesPanel
+                }
             }
-            .padding(26)
+
+            runtimeStrip
+            statusBar
         }
-        .frame(minWidth: 840, minHeight: 660)
+        .padding(16)
+        .frame(minWidth: 720, idealWidth: 740, minHeight: 500, idealHeight: 520)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Palette.canvas)
         .preferredColorScheme(.light)
         .onAppear {
             enginePathInput = viewModel.localModelSettings.enginePath
             modelPathInput = viewModel.localModelSettings.modelPath
             viewModel.refreshSetupStatus(showReadyMessage: false)
+            resizeMainWindowToDashboard()
         }
         .onChange(of: viewModel.localModelSettings) { settings in
             enginePathInput = settings.enginePath
@@ -37,80 +44,24 @@ struct MainView: View {
     }
 
     private var header: some View {
-        HStack(alignment: .center, spacing: 16) {
+        HStack(alignment: .center, spacing: 10) {
             KikuMark()
-                .frame(width: 54, height: 54)
+                .frame(width: 40, height: 40)
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 1) {
                 Text("Kiku Dictate")
-                    .font(.system(size: 30, weight: .bold))
+                    .font(.system(size: 22, weight: .bold))
                     .foregroundStyle(Palette.ink)
-                Text("Private voice-to-text for Dataiku teams")
-                    .font(.system(size: 14, weight: .medium))
+                Text("Local voice-to-text for Dataiku teams")
+                    .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(Palette.muted)
             }
 
             Spacer()
 
             statusBadge(viewModel.setupComplete ? "Ready" : "Setup needed", isOn: viewModel.setupComplete)
-        }
-    }
-
-    private var primaryPanel: some View {
-        HStack(alignment: .center, spacing: 18) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(viewModel.setupComplete ? "Ready to dictate" : "Finish setup to start")
-                    .font(.system(size: 22, weight: .bold))
-                    .foregroundStyle(Palette.ink)
-
-                Text(primarySubtitle)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(Palette.muted)
-                    .lineLimit(2)
-
-                HStack(spacing: 8) {
-                    Label(viewModel.hotkey.displayValue, systemImage: "keyboard")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(Palette.ink)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(RoundedRectangle(cornerRadius: 6).fill(.white))
-
-                    Label("On-device transcription", systemImage: "lock.shield")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(Palette.green)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(RoundedRectangle(cornerRadius: 6).fill(Palette.green.opacity(0.11)))
-                }
-            }
-
-            Spacer()
-
             primaryActionButton
         }
-        .padding(18)
-        .background(RoundedRectangle(cornerRadius: 8).fill(Palette.panel))
-        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Palette.stroke))
-    }
-
-    private var primarySubtitle: String {
-        if viewModel.isRecording {
-            return "Recording now. Press the shortcut again or use Stop when you are done."
-        }
-        if viewModel.isProcessing {
-            return "Transcribing locally. Audio stays on this Mac."
-        }
-        if !viewModel.engineReady || !viewModel.modelReady {
-            return "The local speech engine needs attention from Advanced Runtime."
-        }
-        if !viewModel.hasMicrophonePermission {
-            return "Microphone permission is required before dictation can start."
-        }
-        if !viewModel.hasAccessibilityPermission {
-            return "Dictation works, but auto-paste needs Accessibility permission."
-        }
-        return "Use the shortcut or Record button from any app, then Kiku will paste the result."
     }
 
     private var primaryActionButton: some View {
@@ -119,7 +70,7 @@ struct MainView: View {
                 Button {
                     Task { await viewModel.requestMicrophonePermission() }
                 } label: {
-                    Label("Enable Microphone", systemImage: "mic")
+                    Label("Mic", systemImage: "mic")
                 }
             } else {
                 Button {
@@ -130,89 +81,127 @@ struct MainView: View {
                 .disabled(viewModel.isProcessing || !viewModel.setupComplete)
             }
         }
-        .controlSize(.large)
         .buttonStyle(.borderedProminent)
+        .controlSize(.regular)
         .tint(viewModel.isRecording ? Palette.red : Palette.green)
     }
 
-    private var setupSection: some View {
-        section("Setup") {
-            HStack(alignment: .top, spacing: 12) {
-                setupItem(
-                    title: "Speech engine",
-                    subtitle: viewModel.engineReady && viewModel.modelReady ? "Installed locally" : "Needs IT setup",
+    private var usagePanel: some View {
+        panel {
+            HStack {
+                Label("Usage", systemImage: "chart.bar.xaxis")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(Palette.ink)
+                Spacer()
+                Text(viewModel.setupComplete ? "Live" : "After setup")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(viewModel.setupComplete ? Palette.green : Palette.orange)
+            }
+
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], alignment: .leading, spacing: 12) {
+                usageValue("Words", "\(viewModel.usageSummary.totalWords)")
+                usageValue("Today", "\(viewModel.usageSummary.todayWords)")
+                usageValue("Time saved", formattedHours(viewModel.usageSummary.totalTypingHoursSaved))
+                usageValue("Spend avoided", formattedUSD(viewModel.usageSummary.totalVendorCostAvoidedUSD))
+            }
+
+            Divider()
+                .padding(.vertical, 1)
+
+            VStack(alignment: .leading, spacing: 7) {
+                Text("Trust defaults")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Palette.muted)
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], alignment: .leading, spacing: 7) {
+                    trustPoint("No API key")
+                    trustPoint("No history")
+                    trustPoint("No prompt")
+                    trustPoint("Temp audio deleted")
+                }
+            }
+
+            Text("Only aggregate counters are stored.")
+                .font(.caption2)
+                .foregroundStyle(Palette.muted)
+        }
+    }
+
+    private var setupPanel: some View {
+        panel {
+            HStack {
+                Label("Setup", systemImage: "checklist")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(Palette.ink)
+                Spacer()
+                if !viewModel.runningFromApplications {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(Palette.orange)
+                }
+            }
+
+            HStack(spacing: 10) {
+                setupRow(
+                    title: "Speech",
+                    subtitle: viewModel.engineReady && viewModel.modelReady ? "Ready" : "Needs runtime",
                     systemImage: "cpu",
                     isOn: viewModel.engineReady && viewModel.modelReady,
-                    actionTitle: viewModel.engineReady && viewModel.modelReady ? nil : "Advanced",
+                    actionTitle: viewModel.engineReady && viewModel.modelReady ? nil : "Fix",
                     action: viewModel.engineReady && viewModel.modelReady ? nil : { showAdvancedRuntime = true }
                 )
 
-                setupItem(
-                    title: "Microphone",
-                    subtitle: viewModel.hasMicrophonePermission ? "Ready to record" : "Permission needed",
+                setupRow(
+                    title: "Mic",
+                    subtitle: viewModel.hasMicrophonePermission ? "Ready" : "Needed",
                     systemImage: "mic",
                     isOn: viewModel.hasMicrophonePermission,
                     actionTitle: viewModel.hasMicrophonePermission ? nil : "Enable",
                     action: viewModel.hasMicrophonePermission ? nil : { Task { await viewModel.requestMicrophonePermission() } }
                 )
 
-                setupItem(
-                    title: "Auto-paste",
-                    subtitle: viewModel.hasAccessibilityPermission ? "Enabled" : "Optional permission",
+                setupRow(
+                    title: "Paste",
+                    subtitle: viewModel.hasAccessibilityPermission ? "Enabled" : "Optional",
                     systemImage: "cursorarrow.click",
                     isOn: viewModel.autoPasteReady,
                     actionTitle: viewModel.hasAccessibilityPermission ? nil : "Enable",
                     action: viewModel.hasAccessibilityPermission ? nil : { viewModel.requestAccessibilityPermission() }
                 )
             }
-
-            if !viewModel.runningFromApplications {
-                Label(viewModel.currentAppPath.contains("/AppTranslocation/")
-                      ? "This copy is translocated. Move it to /Applications or ~/Applications and reopen."
-                      : "Install in /Applications or ~/Applications so permissions remain stable.",
-                      systemImage: "exclamationmark.triangle")
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(Palette.orange)
-            }
         }
     }
 
-    private var preferencesSection: some View {
-        section("Preferences") {
-            HStack(alignment: .top, spacing: 18) {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Shortcut")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Palette.muted)
-
-                    HStack(spacing: 10) {
-                        HotkeyCaptureButton(currentHotkey: viewModel.hotkey) { value in
-                            viewModel.updateHotkey(value)
-                        } onCaptureStateChange: { active in
-                            viewModel.setHotkeyCapture(active: active)
-                        } onInvalidCapture: {
-                            viewModel.hotkeyCaptureInvalid()
-                        }
-
-                        Button {
-                            viewModel.updateHotkey(Hotkey(keyCode: UInt32(kVK_Space), modifiers: UInt32(optionKey)))
-                        } label: {
-                            Label("Option Space", systemImage: "keyboard")
-                        }
-
-                        Button {
-                            viewModel.updateHotkey(Hotkey(keyCode: UInt32(kVK_Space), modifiers: UInt32(controlKey)))
-                        } label: {
-                            Label("Control Space", systemImage: "keyboard")
-                        }
-                    }
-                }
-
+    private var preferencesPanel: some View {
+        panel {
+            HStack {
+                Label("Preferences", systemImage: "slider.horizontal.3")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(Palette.ink)
                 Spacer()
             }
 
-            HStack(spacing: 18) {
-                Picker("Start Recording", selection: Binding(
+            HStack(alignment: .center, spacing: 8) {
+                Text("Shortcut")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Palette.muted)
+                    .frame(width: 58, alignment: .leading)
+
+                HotkeyCaptureButton(currentHotkey: viewModel.hotkey) { value in
+                    viewModel.updateHotkey(value)
+                } onCaptureStateChange: { active in
+                    viewModel.setHotkeyCapture(active: active)
+                } onInvalidCapture: {
+                    viewModel.hotkeyCaptureInvalid()
+                }
+            }
+
+            HStack(spacing: 7) {
+                shortcutPreset("Control Space", keyCode: UInt32(kVK_Space), modifiers: UInt32(controlKey))
+                shortcutPreset("Control Shift Space", keyCode: UInt32(kVK_Space), modifiers: UInt32(controlKey | shiftKey))
+                shortcutPreset("Command Shift D", keyCode: UInt32(kVK_ANSI_D), modifiers: UInt32(cmdKey | shiftKey))
+            }
+
+            HStack(spacing: 10) {
+                Picker("Start", selection: Binding(
                     get: { viewModel.persistentStartMode },
                     set: { viewModel.setPersistentStartMode($0) }
                 )) {
@@ -221,109 +210,119 @@ struct MainView: View {
                     }
                 }
                 .pickerStyle(.segmented)
-                .frame(maxWidth: 310)
+                .labelsHidden()
+                .frame(width: 200)
 
-                Toggle("Launch at login", isOn: Binding(
+                compactToggle("Login", isOn: Binding(
                     get: { viewModel.launchAtLoginEnabled },
                     set: { viewModel.setLaunchAtLogin($0) }
                 ))
-                .toggleStyle(.switch)
 
-                Toggle("Floating pill", isOn: Binding(
+                compactToggle("Pill", isOn: Binding(
                     get: { viewModel.overlayPillVisible },
                     set: { viewModel.setOverlayPillVisible($0) }
                 ))
-                .toggleStyle(.switch)
             }
         }
     }
 
-    private var usageSection: some View {
-        section("Usage") {
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 16), count: 4), alignment: .leading, spacing: 12) {
-                usageValue("Words", "\(viewModel.usageSummary.totalWords)")
-                usageValue("Today", "\(viewModel.usageSummary.todayWords)")
-                usageValue("Time saved", formattedHours(viewModel.usageSummary.totalTypingHoursSaved))
-                usageValue("Spend avoided", formattedUSD(viewModel.usageSummary.totalVendorCostAvoidedUSD))
+    private var runtimeStrip: some View {
+        HStack(spacing: 10) {
+            Label("Model: \(viewModel.modelSummary)", systemImage: "cube.box")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(viewModel.modelReady ? Palette.ink : Palette.orange)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+
+            Spacer()
+
+            Button {
+                showAdvancedRuntime.toggle()
+            } label: {
+                Label("Advanced Runtime", systemImage: showAdvancedRuntime ? "chevron.down" : "chevron.right")
             }
-
-            Text("Estimates only. Kiku stores aggregate counters, not transcript text.")
-                .font(.caption)
-                .foregroundStyle(Palette.muted)
-        }
-    }
-
-    private var trustSection: some View {
-        section("Trust defaults") {
-            HStack(spacing: 10) {
-                trustPoint("No API key")
-                trustPoint("No transcript history")
-                trustPoint("No prompt input")
-                trustPoint("Temp audio deleted")
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .popover(isPresented: $showAdvancedRuntime, arrowEdge: .top) {
+                advancedRuntimePopover
+                    .padding(16)
+                    .frame(width: 680)
             }
         }
-    }
-
-    private var advancedRuntimeSection: some View {
-        DisclosureGroup(isExpanded: $showAdvancedRuntime) {
-            VStack(alignment: .leading, spacing: 10) {
-                pathRow(
-                    title: "Engine",
-                    value: $enginePathInput,
-                    ready: viewModel.engineReady,
-                    save: { viewModel.updateEnginePath(enginePathInput) }
-                )
-
-                pathRow(
-                    title: "Model",
-                    value: $modelPathInput,
-                    ready: viewModel.modelReady,
-                    save: { viewModel.updateModelPath(modelPathInput) }
-                )
-
-                HStack(spacing: 10) {
-                    Button {
-                        viewModel.copyInstallCommands()
-                    } label: {
-                        Label("Copy Install Commands", systemImage: "terminal")
-                    }
-
-                    Button {
-                        viewModel.openModelFolder()
-                    } label: {
-                        Label("Open Model Folder", systemImage: "folder")
-                    }
-
-                    Button {
-                        viewModel.resetModelSettings()
-                    } label: {
-                        Label("Reset Paths", systemImage: "arrow.uturn.backward")
-                    }
-
-                    Button {
-                        viewModel.copyDiagnostics()
-                    } label: {
-                        Label("Copy Diagnostics", systemImage: "doc.on.doc")
-                    }
-                }
-
-                Text("Runtime: \(viewModel.localModelSettings.modelName). Usage metrics: \(viewModel.usageStoragePath)")
-                    .font(.caption)
-                    .foregroundStyle(Palette.muted)
-            }
-            .padding(.top, 10)
-        } label: {
-            Label("Advanced Runtime", systemImage: "slider.horizontal.3")
-                .font(.headline)
-                .foregroundStyle(Palette.ink)
-        }
-        .padding(16)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 9)
         .background(RoundedRectangle(cornerRadius: 8).fill(Palette.panel))
         .overlay(RoundedRectangle(cornerRadius: 8).stroke(Palette.stroke))
     }
 
-    private var statusSection: some View {
-        HStack(spacing: 10) {
+    private var advancedRuntimePopover: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Advanced Runtime")
+                    .font(.headline)
+                    .foregroundStyle(Palette.ink)
+                Spacer()
+                Button("Done") {
+                    showAdvancedRuntime = false
+                }
+                .controlSize(.small)
+            }
+
+            Text("Model file: \(viewModel.modelFileName) (\(viewModel.modelSizeDescription))")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Palette.ink)
+
+            pathRow(
+                title: "Engine",
+                value: $enginePathInput,
+                ready: viewModel.engineReady,
+                save: { viewModel.updateEnginePath(enginePathInput) }
+            )
+
+            pathRow(
+                title: "Model",
+                value: $modelPathInput,
+                ready: viewModel.modelReady,
+                save: { viewModel.updateModelPath(modelPathInput) }
+            )
+
+            HStack(spacing: 8) {
+                Button {
+                    viewModel.copyInstallCommands()
+                } label: {
+                    Label("Copy Install", systemImage: "terminal")
+                }
+
+                Button {
+                    viewModel.openModelFolder()
+                } label: {
+                    Label("Open Folder", systemImage: "folder")
+                }
+
+                Button {
+                    viewModel.resetModelSettings()
+                } label: {
+                    Label("Reset", systemImage: "arrow.uturn.backward")
+                }
+
+                Button {
+                    viewModel.copyDiagnostics()
+                } label: {
+                    Label("Diagnostics", systemImage: "doc.on.doc")
+                }
+            }
+            .controlSize(.small)
+
+            Text("Usage metrics: \(viewModel.usageStoragePath)")
+                .font(.caption2)
+                .foregroundStyle(Palette.muted)
+                .lineLimit(1)
+                .truncationMode(.middle)
+        }
+    }
+
+    private var statusBar: some View {
+        HStack(spacing: 8) {
             if viewModel.isProcessing {
                 ProgressView()
                     .controlSize(.small)
@@ -331,30 +330,32 @@ struct MainView: View {
 
             if viewModel.isRecording {
                 Label("Recording \(formattedDuration(viewModel.recordingDuration))", systemImage: "waveform")
-                    .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                    .font(.system(size: 12, weight: .semibold, design: .monospaced))
                     .foregroundStyle(Palette.green)
             } else {
                 Text(viewModel.statusMessage)
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(Palette.muted)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
             }
+
+            Spacer()
         }
-        .frame(minHeight: 20)
+        .frame(minHeight: 18)
     }
 
-    private func section<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(title)
-                .font(.headline)
-                .foregroundStyle(Palette.ink)
+    private func panel<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
             content()
         }
-        .padding(16)
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
         .background(RoundedRectangle(cornerRadius: 8).fill(Palette.panel))
         .overlay(RoundedRectangle(cornerRadius: 8).stroke(Palette.stroke))
     }
 
-    private func setupItem(
+    private func setupRow(
         title: String,
         subtitle: String,
         systemImage: String,
@@ -362,19 +363,18 @@ struct MainView: View {
         actionTitle: String? = nil,
         action: (() -> Void)? = nil
     ) -> some View {
-        VStack(alignment: .leading, spacing: 9) {
-            HStack(spacing: 8) {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 5) {
                 Image(systemName: systemImage)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(isOn ? Palette.green : Palette.orange)
-                    .frame(width: 20)
                 Text(title)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 12, weight: .bold))
                     .foregroundStyle(Palette.ink)
             }
 
             Text(subtitle)
-                .font(.caption)
+                .font(.caption2)
                 .foregroundStyle(Palette.muted)
 
             if let actionTitle, let action {
@@ -386,20 +386,48 @@ struct MainView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    private func shortcutPreset(_ title: String, keyCode: UInt32, modifiers: UInt32) -> some View {
+        Button {
+            viewModel.updateHotkey(Hotkey(keyCode: keyCode, modifiers: modifiers))
+        } label: {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.small)
+    }
+
+    private func compactToggle(_ title: String, isOn: Binding<Bool>) -> some View {
+        HStack(spacing: 4) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Palette.muted)
+                .lineLimit(1)
+            Toggle(title, isOn: isOn)
+                .labelsHidden()
+                .toggleStyle(.switch)
+                .controlSize(.small)
+        }
+    }
+
     private func pathRow(title: String, value: Binding<String>, ready: Bool, save: @escaping () -> Void) -> some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
             statusDot(ready)
             Text(title)
-                .frame(width: 58, alignment: .leading)
+                .font(.caption.weight(.semibold))
+                .frame(width: 48, alignment: .leading)
                 .foregroundStyle(Palette.muted)
             TextField(title, text: value)
                 .textFieldStyle(.roundedBorder)
-                .font(.system(size: 12, design: .monospaced))
+                .font(.system(size: 11, design: .monospaced))
             Button {
                 save()
             } label: {
                 Label("Save", systemImage: "checkmark")
             }
+            .controlSize(.small)
         }
     }
 
@@ -410,37 +438,36 @@ struct MainView: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(Palette.ink)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
+        .padding(.horizontal, 9)
+        .padding(.vertical, 5)
         .background(RoundedRectangle(cornerRadius: 6).fill(.white))
         .overlay(RoundedRectangle(cornerRadius: 6).stroke(Palette.stroke))
     }
 
     private func trustPoint(_ title: String) -> some View {
         Label(title, systemImage: "checkmark.shield")
-            .font(.caption.weight(.medium))
+            .font(.caption2.weight(.medium))
             .foregroundStyle(Palette.green)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 5)
-            .background(RoundedRectangle(cornerRadius: 6).fill(Palette.green.opacity(0.10)))
+            .lineLimit(1)
+            .minimumScaleFactor(0.82)
     }
 
     private func statusDot(_ ready: Bool) -> some View {
         Circle()
             .fill(ready ? Palette.green : Palette.orange)
-            .frame(width: 8, height: 8)
+            .frame(width: 7, height: 7)
     }
 
     private func usageValue(_ label: String, _ value: String) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
+        VStack(alignment: .leading, spacing: 2) {
             Text(label)
-                .font(.caption)
+                .font(.caption2.weight(.semibold))
                 .foregroundStyle(Palette.muted)
             Text(value)
-                .font(.system(size: 19, weight: .bold))
+                .font(.system(size: 23, weight: .bold))
                 .foregroundStyle(Palette.ink)
                 .lineLimit(1)
-                .minimumScaleFactor(0.75)
+                .minimumScaleFactor(0.65)
         }
         .frame(minHeight: 44, alignment: .leading)
     }
@@ -465,6 +492,17 @@ struct MainView: View {
         }
         return String(format: "%.1f hr", value)
     }
+
+    private func resizeMainWindowToDashboard() {
+        DispatchQueue.main.async {
+            guard let window = NSApp.windows.first(where: { $0.title.contains("Kiku Dictate") }) else {
+                return
+            }
+
+            window.minSize = NSSize(width: 720, height: 500)
+            window.setContentSize(NSSize(width: 740, height: 520))
+        }
+    }
 }
 
 private enum Palette {
@@ -486,42 +524,99 @@ private struct KikuMark: View {
             let size = min(proxy.size.width, proxy.size.height)
 
             ZStack {
-                RoundedRectangle(cornerRadius: size * 0.18)
-                    .fill(Palette.ink)
-
                 Circle()
                     .fill(Palette.green)
-                    .frame(width: size * 0.20, height: size * 0.20)
-                    .offset(x: -size * 0.18, y: -size * 0.18)
+                    .frame(width: size * 0.92, height: size * 0.92)
+                    .position(x: size * 0.46, y: size * 0.54)
+
+                DataikuBirdShape()
+                    .fill(.white)
+                    .frame(width: size * 0.70, height: size * 0.70)
+                    .position(x: size * 0.43, y: size * 0.58)
 
                 Circle()
-                    .fill(Palette.yellow)
-                    .frame(width: size * 0.15, height: size * 0.15)
-                    .offset(x: size * 0.20, y: -size * 0.10)
+                    .fill(Palette.ink)
+                    .frame(width: size * 0.055, height: size * 0.055)
+                    .position(x: size * 0.54, y: size * 0.39)
 
-                Circle()
-                    .fill(Palette.blue)
-                    .frame(width: size * 0.16, height: size * 0.16)
-                    .offset(x: -size * 0.02, y: size * 0.22)
+                RoundedRectangle(cornerRadius: size * 0.014)
+                    .fill(.white)
+                    .frame(width: size * 0.24, height: size * 0.055)
+                    .position(x: size * 0.60, y: size * 0.72)
 
-                Path { path in
-                    path.move(to: CGPoint(x: size * 0.32, y: size * 0.34))
-                    path.addLine(to: CGPoint(x: size * 0.52, y: size * 0.46))
-                    path.addLine(to: CGPoint(x: size * 0.70, y: size * 0.40))
-                    path.move(to: CGPoint(x: size * 0.52, y: size * 0.46))
-                    path.addLine(to: CGPoint(x: size * 0.48, y: size * 0.68))
-                }
-                .stroke(.white.opacity(0.88), style: StrokeStyle(lineWidth: size * 0.055, lineCap: .round, lineJoin: .round))
+                SpeechBubbleShape()
+                    .fill(.white)
+                    .frame(width: size * 0.38, height: size * 0.28)
+                    .position(x: size * 0.72, y: size * 0.24)
+                    .shadow(color: .black.opacity(0.12), radius: 2, x: 0, y: 1)
 
-                HStack(spacing: size * 0.035) {
-                    ForEach(0..<4, id: \.self) { index in
-                        RoundedRectangle(cornerRadius: size * 0.02)
-                            .fill(.white.opacity(0.95))
-                            .frame(width: size * 0.035, height: size * CGFloat([0.16, 0.25, 0.34, 0.22][index]))
+                HStack(spacing: size * 0.025) {
+                    ForEach(0..<3, id: \.self) { index in
+                        RoundedRectangle(cornerRadius: size * 0.015)
+                            .fill(Palette.ink)
+                            .frame(width: size * 0.026, height: size * CGFloat([0.08, 0.14, 0.10][index]))
                     }
                 }
-                .offset(x: size * 0.19, y: size * 0.20)
+                .position(x: size * 0.72, y: size * 0.23)
             }
         }
+    }
+}
+
+private struct DataikuBirdShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let w = rect.width
+        let h = rect.height
+
+        path.move(to: CGPoint(x: rect.minX + w * 0.08, y: rect.minY + h * 0.86))
+        path.addLine(to: CGPoint(x: rect.minX + w * 0.39, y: rect.minY + h * 0.54))
+        path.addCurve(
+            to: CGPoint(x: rect.minX + w * 0.54, y: rect.minY + h * 0.22),
+            control1: CGPoint(x: rect.minX + w * 0.42, y: rect.minY + h * 0.38),
+            control2: CGPoint(x: rect.minX + w * 0.48, y: rect.minY + h * 0.25)
+        )
+        path.addCurve(
+            to: CGPoint(x: rect.minX + w * 0.73, y: rect.minY + h * 0.28),
+            control1: CGPoint(x: rect.minX + w * 0.63, y: rect.minY + h * 0.17),
+            control2: CGPoint(x: rect.minX + w * 0.70, y: rect.minY + h * 0.21)
+        )
+        path.addLine(to: CGPoint(x: rect.minX + w * 0.86, y: rect.minY + h * 0.22))
+        path.addLine(to: CGPoint(x: rect.minX + w * 0.78, y: rect.minY + h * 0.34))
+        path.addCurve(
+            to: CGPoint(x: rect.minX + w * 0.60, y: rect.minY + h * 0.61),
+            control1: CGPoint(x: rect.minX + w * 0.75, y: rect.minY + h * 0.50),
+            control2: CGPoint(x: rect.minX + w * 0.68, y: rect.minY + h * 0.60)
+        )
+        path.addCurve(
+            to: CGPoint(x: rect.minX + w * 0.32, y: rect.minY + h * 0.60),
+            control1: CGPoint(x: rect.minX + w * 0.50, y: rect.minY + h * 0.64),
+            control2: CGPoint(x: rect.minX + w * 0.41, y: rect.minY + h * 0.63)
+        )
+        path.addLine(to: CGPoint(x: rect.minX + w * 0.08, y: rect.minY + h * 0.86))
+        path.closeSubpath()
+
+        return path
+    }
+}
+
+private struct SpeechBubbleShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let corner = min(rect.width, rect.height) * 0.24
+        let bubbleRect = CGRect(
+            x: rect.minX,
+            y: rect.minY,
+            width: rect.width,
+            height: rect.height * 0.76
+        )
+
+        path.addRoundedRect(in: bubbleRect, cornerSize: CGSize(width: corner, height: corner))
+        path.move(to: CGPoint(x: rect.minX + rect.width * 0.36, y: bubbleRect.maxY - 1))
+        path.addLine(to: CGPoint(x: rect.minX + rect.width * 0.22, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.minX + rect.width * 0.56, y: bubbleRect.maxY - 1))
+        path.closeSubpath()
+
+        return path
     }
 }

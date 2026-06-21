@@ -99,11 +99,7 @@ final class AppViewModel: ObservableObject {
 
         wireHotkeyCallbacks()
 
-        do {
-            try hotkeyMonitor.register(hotkey: hotkey)
-        } catch {
-            statusMessage = "Could not register hotkey."
-        }
+        registerInitialHotkey()
 
         applyOverlayPillVisibility()
 
@@ -143,6 +139,27 @@ final class AppViewModel: ObservableObject {
         URL(fileURLWithPath: localModelSettings.modelPath).deletingLastPathComponent().path
     }
 
+    var modelFileName: String {
+        URL(fileURLWithPath: localModelSettings.modelPath).lastPathComponent
+    }
+
+    var modelSizeDescription: String {
+        guard let attributes = try? FileManager.default.attributesOfItem(atPath: localModelSettings.modelPath),
+              let size = attributes[.size] as? NSNumber
+        else {
+            return modelReady ? "Local file" : "Missing"
+        }
+
+        let formatter = ByteCountFormatter()
+        formatter.countStyle = .file
+        formatter.allowedUnits = [.useMB, .useGB]
+        return formatter.string(fromByteCount: size.int64Value)
+    }
+
+    var modelSummary: String {
+        "\(localModelSettings.modelName) - \(modelSizeDescription)"
+    }
+
     func updateEnginePath(_ path: String) {
         var next = localModelSettings
         next.enginePath = path.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -178,14 +195,16 @@ final class AppViewModel: ObservableObject {
     }
 
     func updateHotkey(_ newHotkey: Hotkey) {
-        hotkey = newHotkey
-        hotkeyStore.save(newHotkey)
+        let previousHotkey = hotkey
 
         do {
             try hotkeyMonitor.register(hotkey: newHotkey)
+            hotkey = newHotkey
+            hotkeyStore.save(newHotkey)
             statusMessage = "Hotkey updated to \(newHotkey.displayValue)."
         } catch {
-            statusMessage = "Could not update hotkey."
+            try? hotkeyMonitor.register(hotkey: previousHotkey)
+            statusMessage = "That shortcut is already used by macOS or another app. Pick a different shortcut."
         }
     }
 
@@ -460,6 +479,29 @@ final class AppViewModel: ObservableObject {
             guard let self else { return }
             Task { @MainActor in
                 await self.handleHotkeyRelease()
+            }
+        }
+    }
+
+    private func registerInitialHotkey() {
+        do {
+            try hotkeyMonitor.register(hotkey: hotkey)
+            return
+        } catch {
+            let fallback = Hotkey.default
+            guard hotkey != fallback else {
+                statusMessage = "Could not register the default shortcut. Pick another shortcut."
+                return
+            }
+
+            hotkey = fallback
+            hotkeyStore.save(fallback)
+
+            do {
+                try hotkeyMonitor.register(hotkey: fallback)
+                statusMessage = "Shortcut reset to \(fallback.displayValue)."
+            } catch {
+                statusMessage = "Could not register a global shortcut. Pick another shortcut."
             }
         }
     }

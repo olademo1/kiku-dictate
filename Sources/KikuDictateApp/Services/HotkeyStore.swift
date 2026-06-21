@@ -1,7 +1,10 @@
+import Carbon
 import Foundation
 
 final class HotkeyStore {
     private let key = "kiku_dictate_hotkey"
+    private let migratedOpenAIShortcutKey = "kiku_dictate_migrated_openai_shortcut"
+    private let legacyOptionSpace = Hotkey(keyCode: UInt32(kVK_Space), modifiers: UInt32(optionKey))
     private let defaults: UserDefaults
 
     init(defaults: UserDefaults = .standard) {
@@ -20,6 +23,13 @@ final class HotkeyStore {
             return .default
         }
 
+        if value == legacyOptionSpace && !defaults.bool(forKey: migratedOpenAIShortcutKey) {
+            defaults.set(true, forKey: migratedOpenAIShortcutKey)
+            save(.default)
+            return .default
+        }
+
+        defaults.set(true, forKey: migratedOpenAIShortcutKey)
         return value
     }
 

@@ -9,6 +9,6 @@ struct KikuDictateApp: App {
         WindowGroup("Kiku Dictate") {
             MainView(viewModel: viewModel)
         }
-        .defaultSize(width: 780, height: 620)
+        .defaultSize(width: 740, height: 520)
     }
 }
