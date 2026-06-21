@@ -55,7 +55,7 @@ Dataiku Chirp.app/Contents/Resources/Runtime/lib/*.dylib
 Dataiku Chirp.app/Contents/Resources/Models/ggml-large-v3-turbo.bin
 ```
 
-The resulting zip is large, roughly model-sized plus app/runtime overhead, but pilot users only need to download the zip, open the app, accept the `Move and Relaunch` prompt, pick their team, and grant microphone/accessibility permissions. If `/Applications` is not writable, Dataiku Chirp falls back to `~/Applications` so the move does not require admin rights.
+The resulting app bundle is large, roughly model-sized plus app/runtime overhead. For a cleaner tester experience, package the notarized app into a DMG so pilot users download one disk image, drag Dataiku Chirp into Applications, pick their team, and grant microphone/accessibility permissions.
 
 The bundled app uses the architecture of the Mac that built it. A build made on an Apple Silicon Mac with Homebrew in `/opt/homebrew` is typically `arm64`. Confirm the pilot users are on Apple Silicon Macs before sharing one build broadly; Intel Macs need a separate compatible build or a universal runtime.
 
@@ -117,6 +117,15 @@ The notarization script:
 3. Staples the notarization ticket to the `.app`.
 4. Runs a Gatekeeper assessment.
 5. Creates a final zip in `releases/`.
+
+To create the drag-to-Applications DMG from a signed/notarized app:
+
+```bash
+APPLE_NOTARY_PROFILE=dataiku-chirp-notary DATAIKU_CHIRP_NOTARIZE_DMG=1 \
+  ./scripts/package_dmg.sh "dist/Dataiku Chirp.app" "releases/DataikuChirp-macOS.dmg"
+```
+
+The DMG script adds the Applications shortcut, arranges the Finder window, signs the disk image, submits it for notarization, staples the ticket, validates it with Gatekeeper, and writes a `.sha256` file.
 
 ## Package A Local Release Without Notarization
 

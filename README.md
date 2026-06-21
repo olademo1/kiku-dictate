@@ -12,24 +12,26 @@ The major difference is the security model: there is no OpenAI API key, no promp
 - Default target model: `ggml-large-v3-turbo.bin`.
 - Stores only aggregate usage metrics.
 - Optional global usage dashboard sends cumulative aggregate counters only.
-- Ships as a downloadable `.zip` release artifact for testers.
+- Ships as a signed, notarized `.dmg` installer for testers.
 - Builds without network access or third-party Swift dependencies.
 
 ## Download For Testers
 
-Go to the repo's [Releases page](https://github.com/olademo1/kiku-dictate/releases), download the latest `DataikuChirp-macOS-*.zip`, unzip it, then open `Dataiku Chirp.app`.
+Go to the repo's [Releases page](https://github.com/olademo1/kiku-dictate/releases), download the latest `DataikuChirp-macOS.dmg`, open it, drag `Dataiku Chirp.app` into `Applications`, then open the app from Applications.
 
 For the People team pilot, use an all-in-one release made by `./scripts/build_pilot_release.sh`. That bundled app includes `whisper-cli`, its required libraries, and `ggml-large-v3-turbo.bin`, so testers do not need to install Homebrew, find a CLI binary, or choose a model path. The pilot release is signed and notarized with the current Developer ID identity on the build Mac.
 
 On first launch:
 
-1. Open `Dataiku Chirp.app`.
-2. If prompted, choose `Move and Relaunch`.
-3. Allow microphone access.
-4. Enable Accessibility only if you want automatic paste into the active app.
-5. Press the configured shortcut or the `Record` button.
+1. Open `DataikuChirp-macOS.dmg`.
+2. Drag `Dataiku Chirp.app` into `Applications`.
+3. Open `Dataiku Chirp.app` from Applications.
+4. Choose your team during setup.
+5. Allow microphone access.
+6. Enable Accessibility only if you want automatic paste into the active app.
+7. Press the configured shortcut or the `Record` button.
 
-If macOS blocks the app because it has not been notarized yet, open it from Finder by right-clicking `Dataiku Chirp.app` and choosing `Open`. This prototype is Developer ID signed locally but not yet notarized for broad external distribution.
+The public pilot artifact is signed and notarized. If you build a local test app without notarization, macOS may still require right-clicking the app and choosing `Open`.
 
 ## Setup
 
@@ -45,6 +47,13 @@ To build the all-in-one pilot app:
 ```bash
 ./scripts/install_local_engine.sh
 ./scripts/build_pilot_release.sh
+```
+
+To package a signed and notarized pilot app as a drag-to-Applications DMG:
+
+```bash
+APPLE_NOTARY_PROFILE=dataiku-chirp-notary DATAIKU_CHIRP_NOTARIZE_DMG=1 \
+  ./scripts/package_dmg.sh "dist/Dataiku Chirp.app" "releases/DataikuChirp-macOS.dmg"
 ```
 
 The model file is large and is intentionally not committed to git. The helper installs it to:
