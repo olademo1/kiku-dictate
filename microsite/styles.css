@@ -105,9 +105,16 @@ h1 {
   line-height: 1.55;
 }
 
-.actions,
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 26px;
+}
+
 .download-actions {
   display: flex;
+  flex-direction: column;
   flex-wrap: wrap;
   gap: 12px;
   margin-top: 26px;
@@ -128,6 +135,10 @@ h1 {
 .primary {
   background: var(--ink);
   color: white;
+}
+
+.download-button {
+  min-width: 286px;
 }
 
 .secondary {
@@ -357,6 +368,23 @@ li + li {
   border-radius: 8px;
   background: var(--panel);
   box-shadow: 0 18px 44px rgba(17, 24, 39, 0.09);
+}
+
+.download-panel .download-actions {
+  align-items: flex-start;
+  margin-top: 0;
+}
+
+.verification-note {
+  max-width: 320px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.verification-note a {
+  color: var(--green-dark);
+  font-weight: 800;
 }
 
 footer {
