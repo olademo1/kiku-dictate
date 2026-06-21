@@ -84,7 +84,9 @@ dist/Dataiku Chirp.app
 
 ## Global Usage
 
-The `Usage > Team` popover can connect to a Google Apps Script web app for pilot-wide totals. The recommended design stores one row per laptop and updates that row with cumulative counters, so 1,000 employees remain roughly 1,000 rows instead of a per-dictation event stream.
+The `Usage > Team` popover connects to the configured Google Apps Script web app for pilot-wide totals. Users choose a broad team from a dropdown and decide whether to share aggregate counters. They do not paste an endpoint URL or key.
+
+The recommended design stores one row per laptop and updates that row with cumulative counters, so 1,000 employees remain roughly 1,000 rows instead of a per-dictation event stream.
 
 Use `integrations/google-apps-script/global_usage.gs` and follow [docs/global-usage-google-apps-script.md](docs/global-usage-google-apps-script.md).
 

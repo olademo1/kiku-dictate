@@ -7,9 +7,10 @@ Dataiku Chirp can report opt-in aggregate counters to a Google Apps Script web a
 Use a cumulative upsert model:
 
 1. Each laptop gets one random `installationId`.
-2. The app sends cumulative totals for that install: sessions, total words, total local transcription minutes, estimated typing time saved, and estimated vendor spend avoided.
-3. Apps Script stores one row per install in a Google Sheet.
-4. The dashboard sums the rows.
+2. The user chooses a broad team from the app dropdown.
+3. The app sends cumulative totals for that install: team, sessions, total words, total local transcription minutes, estimated typing time saved, and estimated vendor spend avoided.
+4. Apps Script stores one row per install in a Google Sheet.
+5. The dashboard sums the rows.
 
 This is intentionally different from event logging. With 1,000 employees, event logging can become a noisy append-only analytics pipeline. Cumulative upsert keeps the sheet around 1,000 rows and makes retrying safe because the latest row replaces the previous row for the same install.
 
@@ -27,15 +28,18 @@ Sources:
 ## Setup
 
 1. Create a Google Sheet named `Dataiku Chirp Usage`.
-2. Open `Extensions > Apps Script`.
+2. Create a standalone Apps Script project.
 3. Paste `integrations/google-apps-script/global_usage.gs`.
-4. Run `setup` once.
-5. In Apps Script, open `Project Settings > Script properties`.
+4. In Apps Script, open `Project Settings > Script properties`.
+5. Add `SPREADSHEET_ID` with the Google Sheet ID.
 6. Add `TEAM_KEY` with a long random value.
-7. Deploy as a web app.
-8. Paste the web app URL and team key into `Usage > Team` inside Dataiku Chirp.
+7. Run `setup` once.
+8. Deploy as a web app with execute-as `Me` and access `Anyone`.
+9. Build Dataiku Chirp with `DATAIKU_CHIRP_USAGE_ENDPOINT` and `DATAIKU_CHIRP_USAGE_TEAM_KEY` set.
 
-For a small internal pilot, deploy access can be restricted to the company domain if that fits the Workspace configuration. If the deployment must be accessible by link, the `TEAM_KEY` check still prevents accidental public reads and writes, but it is shared-secret security rather than enterprise auth.
+The app UI does not expose the endpoint URL or team key. Users only choose their team and toggle aggregate sharing.
+
+For the native Mac app to POST without Google OAuth, the Apps Script web app needs link-level access. The `TEAM_KEY` check prevents accidental public reads and writes, but it is shared-secret security rather than enterprise auth.
 
 ## Payload Shape
 
@@ -45,6 +49,7 @@ The app posts this kind of JSON:
 {
   "teamKey": "shared-secret",
   "installationId": "0F89C8A8-9F4E-4F1F-9E66-B6DA9B9963E2",
+  "teamName": "Engineering",
   "appVersion": "0.2.0",
   "modelName": "Whisper large-v3 turbo",
   "sessions": 42,

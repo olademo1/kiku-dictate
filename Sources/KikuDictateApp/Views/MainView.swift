@@ -8,8 +8,6 @@ struct MainView: View {
     @State private var enginePathInput = ""
     @State private var modelPathInput = ""
     @State private var modelNameInput = ""
-    @State private var globalEndpointInput = ""
-    @State private var globalTeamKeyInput = ""
     @State private var showAdvancedRuntime = false
     @State private var showGlobalUsage = false
 
@@ -39,8 +37,6 @@ struct MainView: View {
             enginePathInput = viewModel.localModelSettings.enginePath
             modelPathInput = viewModel.localModelSettings.modelPath
             modelNameInput = viewModel.localModelSettings.modelName
-            globalEndpointInput = viewModel.globalUsageSettings.endpointURLString
-            globalTeamKeyInput = viewModel.globalUsageSettings.teamKey
             viewModel.refreshSetupStatus(showReadyMessage: false)
             resizeMainWindowToDashboard()
         }
@@ -49,16 +45,12 @@ struct MainView: View {
             modelPathInput = settings.modelPath
             modelNameInput = settings.modelName
         }
-        .onChange(of: viewModel.globalUsageSettings) { settings in
-            globalEndpointInput = settings.endpointURLString
-            globalTeamKeyInput = settings.teamKey
-        }
     }
 
     private var header: some View {
         HStack(alignment: .center, spacing: 10) {
             DataikuChirpMark()
-                .frame(width: 40, height: 40)
+                .frame(width: 58, height: 50)
 
             VStack(alignment: .leading, spacing: 1) {
                 Text("Dataiku Chirp")
@@ -106,8 +98,6 @@ struct MainView: View {
                     .foregroundStyle(Palette.ink)
                 Spacer()
                 Button {
-                    globalEndpointInput = viewModel.globalUsageSettings.endpointURLString
-                    globalTeamKeyInput = viewModel.globalUsageSettings.teamKey
                     showGlobalUsage.toggle()
                 } label: {
                     Label("Team", systemImage: "building.2")
@@ -176,33 +166,31 @@ struct MainView: View {
 
             Toggle("Share my aggregate counters", isOn: Binding(
                 get: { viewModel.globalUsageSettings.enabled },
-                set: { enabled in
-                    saveGlobalUsageInputs()
-                    viewModel.setGlobalUsageSharing(enabled)
-                }
+                set: { enabled in viewModel.setGlobalUsageSharing(enabled) }
             ))
             .toggleStyle(.switch)
             .controlSize(.small)
 
-            VStack(alignment: .leading, spacing: 8) {
-                TextField("Apps Script web app URL", text: $globalEndpointInput)
-                    .textFieldStyle(.roundedBorder)
-                    .font(.system(size: 11, design: .monospaced))
+            HStack(spacing: 10) {
+                Text("Team")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Palette.muted)
+                    .frame(width: 56, alignment: .leading)
 
-                SecureField("Team key", text: $globalTeamKeyInput)
-                    .textFieldStyle(.roundedBorder)
-                    .font(.system(size: 11, design: .monospaced))
+                Picker("Team", selection: Binding(
+                    get: { viewModel.globalUsageSettings.team },
+                    set: { viewModel.setGlobalUsageTeam($0) }
+                )) {
+                    ForEach(DataikuTeam.allCases) { team in
+                        Text(team.rawValue).tag(team)
+                    }
+                }
+                .pickerStyle(.menu)
+                .labelsHidden()
             }
 
             HStack(spacing: 8) {
                 Button {
-                    saveGlobalUsageInputs()
-                } label: {
-                    Label("Save", systemImage: "checkmark")
-                }
-
-                Button {
-                    saveGlobalUsageInputs()
                     viewModel.syncGlobalUsageNow()
                 } label: {
                     Label("Sync", systemImage: "arrow.triangle.2.circlepath")
@@ -210,7 +198,6 @@ struct MainView: View {
                 .disabled(viewModel.isSyncingGlobalUsage)
 
                 Button {
-                    saveGlobalUsageInputs()
                     viewModel.refreshGlobalUsage()
                 } label: {
                     Label("Refresh", systemImage: "arrow.clockwise")
@@ -611,11 +598,6 @@ struct MainView: View {
         .frame(minHeight: 40, alignment: .leading)
     }
 
-    private func saveGlobalUsageInputs() {
-        viewModel.updateGlobalUsageEndpoint(globalEndpointInput)
-        viewModel.updateGlobalUsageTeamKey(globalTeamKeyInput)
-    }
-
     private func formattedDuration(_ seconds: TimeInterval) -> String {
         let total = max(Int(seconds), 0)
         let minutes = total / 60
@@ -665,7 +647,7 @@ private enum Palette {
 private struct DataikuChirpMark: View {
     var body: some View {
         Group {
-            if let image = NSImage(named: "AppIcon") {
+            if let image = NSImage(named: "BrandMark") {
                 Image(nsImage: image)
                     .resizable()
                     .scaledToFit()
@@ -680,36 +662,30 @@ private struct DataikuChirpMark: View {
             let size = min(proxy.size.width, proxy.size.height)
 
             ZStack {
-                Circle()
-                    .fill(Palette.green)
-                    .frame(width: size * 0.92, height: size * 0.92)
-                    .position(x: size * 0.46, y: size * 0.54)
-
                 DataikuBirdShape()
-                    .fill(.white)
-                    .frame(width: size * 0.70, height: size * 0.70)
+                    .fill(Palette.ink)
+                    .frame(width: size * 0.78, height: size * 0.78)
                     .position(x: size * 0.43, y: size * 0.58)
 
                 Circle()
-                    .fill(Palette.ink)
+                    .fill(Palette.canvas)
                     .frame(width: size * 0.055, height: size * 0.055)
                     .position(x: size * 0.54, y: size * 0.39)
 
                 RoundedRectangle(cornerRadius: size * 0.014)
-                    .fill(.white)
+                    .fill(Palette.ink)
                     .frame(width: size * 0.24, height: size * 0.055)
                     .position(x: size * 0.60, y: size * 0.72)
 
                 SpeechBubbleShape()
-                    .fill(.white)
+                    .fill(Palette.ink)
                     .frame(width: size * 0.38, height: size * 0.28)
                     .position(x: size * 0.72, y: size * 0.24)
-                    .shadow(color: .black.opacity(0.12), radius: 2, x: 0, y: 1)
 
                 HStack(spacing: size * 0.025) {
                     ForEach(0..<3, id: \.self) { index in
                         RoundedRectangle(cornerRadius: size * 0.015)
-                            .fill(Palette.ink)
+                            .fill(Palette.canvas)
                             .frame(width: size * 0.026, height: size * CGFloat([0.08, 0.14, 0.10][index]))
                     }
                 }

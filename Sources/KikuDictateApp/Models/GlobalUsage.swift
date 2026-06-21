@@ -1,27 +1,57 @@
 import Foundation
 
+enum DataikuTeam: String, CaseIterable, Codable, Identifiable {
+    case engineering = "Engineering"
+    case product = "Product"
+    case goToMarket = "Go-to-Market"
+    case customer = "Customer"
+    case marketing = "Marketing"
+    case finance = "Finance"
+    case people = "People"
+    case legal = "Legal"
+    case itSecurity = "IT/Security"
+    case operations = "Operations"
+    case strategy = "Strategy"
+    case other = "Other"
+
+    var id: String { rawValue }
+}
+
+enum GlobalUsageConfiguration {
+    static var endpointURLString: String {
+        Bundle.main.object(forInfoDictionaryKey: "DataikuChirpUsageEndpoint") as? String ?? ""
+    }
+
+    static var teamKey: String {
+        Bundle.main.object(forInfoDictionaryKey: "DataikuChirpUsageTeamKey") as? String ?? ""
+    }
+
+    static var endpointURL: URL? {
+        guard !endpointURLString.isEmpty, let url = URL(string: endpointURLString) else {
+            return nil
+        }
+        return url.scheme?.lowercased() == "https" ? url : nil
+    }
+
+    static var isConfigured: Bool {
+        endpointURL != nil && !teamKey.isEmpty
+    }
+}
+
 struct GlobalUsageSettings: Codable, Equatable {
     var enabled: Bool
-    var endpointURLString: String
-    var teamKey: String
+    var team: DataikuTeam
     var installationId: String
     var lastSyncedAt: Date?
 
-    var hasEndpoint: Bool {
-        let value = endpointURLString.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !value.isEmpty, let url = URL(string: value) else { return false }
-        return url.scheme?.lowercased() == "https"
-    }
-
     var isConfigured: Bool {
-        hasEndpoint && !teamKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        GlobalUsageConfiguration.isConfigured
     }
 
     static func defaultSettings(installationId: String) -> GlobalUsageSettings {
         GlobalUsageSettings(
             enabled: false,
-            endpointURLString: "",
-            teamKey: "",
+            team: .other,
             installationId: installationId,
             lastSyncedAt: nil
         )
@@ -51,6 +81,7 @@ struct GlobalUsageSnapshot: Codable, Equatable {
 struct GlobalUsageReport: Codable, Equatable {
     let teamKey: String
     let installationId: String
+    let teamName: String
     let appVersion: String
     let modelName: String
     let sessions: Int

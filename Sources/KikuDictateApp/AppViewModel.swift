@@ -225,16 +225,14 @@ final class AppViewModel: ObservableObject {
         statusMessage = "Local model install commands copied."
     }
 
-    func updateGlobalUsageEndpoint(_ value: String) {
+    func setGlobalUsageTeam(_ team: DataikuTeam) {
         var next = globalUsageSettings
-        next.endpointURLString = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        next.team = team
         saveGlobalUsageSettings(next)
-    }
 
-    func updateGlobalUsageTeamKey(_ value: String) {
-        var next = globalUsageSettings
-        next.teamKey = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        saveGlobalUsageSettings(next)
+        if next.enabled {
+            syncGlobalUsageNow()
+        }
     }
 
     func setGlobalUsageSharing(_ enabled: Bool) {
@@ -570,7 +568,7 @@ final class AppViewModel: ObservableObject {
         if !globalUsageSettings.enabled {
             globalUsageStatus = "Team stats sharing is off."
         } else if !globalUsageSettings.isConfigured {
-            globalUsageStatus = "Add a web app URL and team key to sync team stats."
+            globalUsageStatus = "Team stats endpoint is not configured in this build."
         } else if let lastSyncedAt = globalUsageSettings.lastSyncedAt {
             globalUsageStatus = "Team stats synced \(lastSyncedAt.formatted(date: .omitted, time: .shortened))."
         } else {
@@ -580,7 +578,7 @@ final class AppViewModel: ObservableObject {
 
     private func fetchGlobalUsageSnapshot() async {
         guard globalUsageSettings.isConfigured else {
-            globalUsageStatus = "Add a web app URL and team key to view team stats."
+            globalUsageStatus = "Team stats endpoint is not configured in this build."
             return
         }
 
@@ -607,7 +605,7 @@ final class AppViewModel: ObservableObject {
     private func syncGlobalUsage(force: Bool) async {
         guard globalUsageSettings.enabled else { return }
         guard globalUsageSettings.isConfigured else {
-            globalUsageStatus = "Add a web app URL and team key to sync team stats."
+            globalUsageStatus = "Team stats endpoint is not configured in this build."
             return
         }
 

@@ -45,6 +45,7 @@ The app has no network transcription path. The install helper downloads the mode
 Global usage sharing is optional and off by default. When enabled, it sends cumulative aggregate counters only:
 
 - installation ID
+- broad team name
 - app version
 - model name
 - sessions
@@ -60,5 +61,5 @@ It does not send audio, transcript text, clipboard contents, active app names, o
 - Clipboard content briefly contains the generated transcript so the app can paste.
 - Accessibility permission allows the app to synthesize Cmd+V events.
 - The selected `whisper-cli` binary and model file must be trusted.
-- A pilot Apps Script team key is a shared secret, not full enterprise identity.
+- A pilot Apps Script team key is build configuration, not per-user identity, and is not full enterprise auth.
 - The local machine can still be compromised by unrelated malware.

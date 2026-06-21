@@ -2,6 +2,7 @@ const SHEET_NAME = 'Installations';
 const ACTIVE_WINDOW_DAYS = 30;
 const HEADERS = [
   'installationId',
+  'teamName',
   'lastSeenAt',
   'appVersion',
   'modelName',
@@ -60,8 +61,16 @@ function authorize_(provided) {
   }
 }
 
+function spreadsheet_() {
+  const spreadsheetId = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID');
+  if (!spreadsheetId) {
+    throw new Error('Set script property SPREADSHEET_ID before deploying.');
+  }
+  return SpreadsheetApp.openById(spreadsheetId);
+}
+
 function ensureSheet_() {
-  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  const spreadsheet = spreadsheet_();
   let sheet = spreadsheet.getSheetByName(SHEET_NAME);
   if (!sheet) {
     sheet = spreadsheet.insertSheet(SHEET_NAME);
@@ -85,7 +94,8 @@ function upsertInstallation_(sheet, payload) {
 
   const row = [
     installationId,
-    new Date().toISOString(),
+    String(payload.teamName || 'Other'),
+    new Date(),
     String(payload.appVersion || ''),
     String(payload.modelName || ''),
     toNumber_(payload.sessions),
@@ -114,16 +124,16 @@ function summarize_(sheet) {
   const stats = values.reduce((acc, row) => {
     if (!row[0]) return acc;
 
-    const lastSeenAt = new Date(row[1]).getTime();
+    const lastSeenAt = new Date(row[2]).getTime();
     if (!Number.isNaN(lastSeenAt) && now - lastSeenAt <= activeCutoffMs) {
       acc.activeInstallations += 1;
     }
 
-    acc.totalSessions += toNumber_(row[4]);
-    acc.totalWords += toNumber_(row[5]);
-    acc.totalTranscriptionMinutes += toNumber_(row[6]);
-    acc.totalTypingHoursSaved += toNumber_(row[7]);
-    acc.totalVendorCostAvoidedUSD += toNumber_(row[8]);
+    acc.totalSessions += toNumber_(row[5]);
+    acc.totalWords += toNumber_(row[6]);
+    acc.totalTranscriptionMinutes += toNumber_(row[7]);
+    acc.totalTypingHoursSaved += toNumber_(row[8]);
+    acc.totalVendorCostAvoidedUSD += toNumber_(row[9]);
     return acc;
   }, {
     activeInstallations: 0,

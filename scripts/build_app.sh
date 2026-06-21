@@ -8,9 +8,11 @@ APP_NAME="Dataiku Chirp"
 APP_BUNDLE="$APP_NAME.app"
 EXECUTABLE_NAME="KikuDictate"
 BUNDLE_ID="com.dataiku.chirp"
-VERSION="0.2.0"
+VERSION="0.2.1"
 BUILD_NUMBER="$(date +%Y%m%d%H%M%S)"
 ENTITLEMENTS_PLIST="$ROOT_DIR/KikuDictate.entitlements"
+GLOBAL_USAGE_ENDPOINT="${DATAIKU_CHIRP_USAGE_ENDPOINT:-}"
+GLOBAL_USAGE_TEAM_KEY="${DATAIKU_CHIRP_USAGE_TEAM_KEY:-}"
 
 echo "Building release binary..."
 swift build -c release
@@ -47,6 +49,7 @@ cp "$BIN_PATH" "$MACOS_DIR/$EXECUTABLE_NAME"
 chmod +x "$MACOS_DIR/$EXECUTABLE_NAME"
 
 ICON_PNG="$ROOT_DIR/assets/app-icon-1024.png"
+BRAND_MARK_PNG="$ROOT_DIR/assets/brand-mark.png"
 if [[ -f "$ICON_PNG" ]] && command -v iconutil >/dev/null 2>&1; then
   TMP_DIR="$(mktemp -d)"
   ICONSET="$TMP_DIR/AppIcon.iconset"
@@ -78,6 +81,10 @@ PY
 
   iconutil -c icns "$ICONSET" -o "$RESOURCES_DIR/AppIcon.icns" >/dev/null
   rm -rf "$TMP_DIR"
+fi
+
+if [[ -f "$BRAND_MARK_PNG" ]]; then
+  cp "$BRAND_MARK_PNG" "$RESOURCES_DIR/BrandMark.png"
 fi
 
 INFO_PLIST="$CONTENTS/Info.plist"
@@ -116,6 +123,10 @@ cat > "$INFO_PLIST" <<PLIST
   <string>public.app-category.productivity</string>
   <key>CFBundleIconFile</key>
   <string>AppIcon</string>
+  <key>DataikuChirpUsageEndpoint</key>
+  <string>$GLOBAL_USAGE_ENDPOINT</string>
+  <key>DataikuChirpUsageTeamKey</key>
+  <string>$GLOBAL_USAGE_TEAM_KEY</string>
 </dict>
 </plist>
 PLIST

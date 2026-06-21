@@ -11,7 +11,7 @@ enum GlobalUsageClientError: LocalizedError {
         case .disabled:
             return "Team stats sharing is off."
         case .notConfigured:
-            return "Add a web app URL and team key first."
+            return "Team stats endpoint is not configured in this build."
         case .invalidResponse:
             return "The global usage endpoint returned an unexpected response."
         case .serverMessage(let message):
@@ -40,8 +40,9 @@ final class GlobalUsageClient {
         guard settings.enabled else { throw GlobalUsageClientError.disabled }
         let url = try endpointURL(from: settings)
         let report = GlobalUsageReport(
-            teamKey: settings.teamKey.trimmingCharacters(in: .whitespacesAndNewlines),
+            teamKey: GlobalUsageConfiguration.teamKey,
             installationId: settings.installationId,
+            teamName: settings.team.rawValue,
             appVersion: appVersion,
             modelName: modelName,
             sessions: summary.sessions,
@@ -68,7 +69,7 @@ final class GlobalUsageClient {
 
         var items = components.queryItems ?? []
         items.append(URLQueryItem(name: "format", value: "json"))
-        items.append(URLQueryItem(name: "teamKey", value: settings.teamKey.trimmingCharacters(in: .whitespacesAndNewlines)))
+        items.append(URLQueryItem(name: "teamKey", value: GlobalUsageConfiguration.teamKey))
         components.queryItems = items
 
         guard let url = components.url else {
@@ -79,8 +80,7 @@ final class GlobalUsageClient {
     }
 
     private func endpointURL(from settings: GlobalUsageSettings) throws -> URL {
-        let value = settings.endpointURLString.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard settings.isConfigured, let url = URL(string: value) else {
+        guard settings.isConfigured, let url = GlobalUsageConfiguration.endpointURL else {
             throw GlobalUsageClientError.notConfigured
         }
         return url
