@@ -13,6 +13,48 @@ BUILD_NUMBER="$(date +%Y%m%d%H%M%S)"
 ENTITLEMENTS_PLIST="$ROOT_DIR/KikuDictate.entitlements"
 GLOBAL_USAGE_ENDPOINT="${DATAIKU_CHIRP_USAGE_ENDPOINT:-}"
 GLOBAL_USAGE_TEAM_KEY="${DATAIKU_CHIRP_USAGE_TEAM_KEY:-}"
+BUNDLE_LOCAL_RUNTIME="${DATAIKU_CHIRP_BUNDLE_LOCAL_RUNTIME:-0}"
+LOCAL_WHISPER_CLI="${DATAIKU_CHIRP_WHISPER_CLI_PATH:-$(command -v whisper-cli || true)}"
+LOCAL_MODEL_PATH="${DATAIKU_CHIRP_MODEL_PATH:-}"
+
+find_default_model() {
+  local candidates=(
+    "$HOME/Library/Application Support/DataikuChirp/Models/ggml-large-v3-turbo.bin"
+    "$HOME/Library/Application Support/KikuDictate/Models/ggml-large-v3-turbo.bin"
+    "$ROOT_DIR/Models/ggml-large-v3-turbo.bin"
+  )
+
+  local candidate
+  for candidate in "${candidates[@]}"; do
+    if [[ -f "$candidate" ]]; then
+      echo "$candidate"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+resolve_runtime_library() {
+  local install_name="$1"
+  local base_name="${install_name#@rpath/}"
+  local candidates=(
+    "$base_name"
+    "/opt/homebrew/lib/$base_name"
+    "/usr/local/lib/$base_name"
+    "$(dirname "$LOCAL_WHISPER_CLI")/../lib/$base_name"
+  )
+
+  local candidate
+  for candidate in "${candidates[@]}"; do
+    if [[ -f "$candidate" ]]; then
+      echo "$candidate"
+      return 0
+    fi
+  done
+
+  return 1
+}
 
 echo "Building release binary..."
 swift build -c release
@@ -85,6 +127,55 @@ fi
 
 if [[ -f "$BRAND_MARK_PNG" ]]; then
   cp "$BRAND_MARK_PNG" "$RESOURCES_DIR/BrandMark.png"
+fi
+
+if [[ "$BUNDLE_LOCAL_RUNTIME" == "1" ]]; then
+  if [[ -z "$LOCAL_WHISPER_CLI" || ! -x "$LOCAL_WHISPER_CLI" ]]; then
+    echo "ERROR: DATAIKU_CHIRP_BUNDLE_LOCAL_RUNTIME=1 but whisper-cli was not found."
+    echo "Install whisper-cpp or set DATAIKU_CHIRP_WHISPER_CLI_PATH."
+    exit 1
+  fi
+
+  if [[ -z "$LOCAL_MODEL_PATH" ]]; then
+    LOCAL_MODEL_PATH="$(find_default_model || true)"
+  fi
+
+  if [[ -z "$LOCAL_MODEL_PATH" || ! -f "$LOCAL_MODEL_PATH" ]]; then
+    echo "ERROR: DATAIKU_CHIRP_BUNDLE_LOCAL_RUNTIME=1 but the Whisper model was not found."
+    echo "Run ./scripts/install_local_engine.sh or set DATAIKU_CHIRP_MODEL_PATH."
+    exit 1
+  fi
+
+  RUNTIME_BIN_DIR="$RESOURCES_DIR/Runtime/bin"
+  RUNTIME_LIB_DIR="$RESOURCES_DIR/Runtime/lib"
+  MODELS_DIR="$RESOURCES_DIR/Models"
+  BUNDLED_WHISPER_CLI="$RUNTIME_BIN_DIR/whisper-cli"
+
+  mkdir -p "$RUNTIME_BIN_DIR" "$RUNTIME_LIB_DIR" "$MODELS_DIR"
+  cp "$LOCAL_WHISPER_CLI" "$BUNDLED_WHISPER_CLI"
+  chmod +x "$BUNDLED_WHISPER_CLI"
+
+  while IFS= read -r install_name; do
+    [[ -z "$install_name" ]] && continue
+    source_lib="$(resolve_runtime_library "$install_name" || true)"
+    if [[ -z "$source_lib" ]]; then
+      echo "ERROR: could not resolve runtime library: $install_name"
+      exit 1
+    fi
+    cp -L "$source_lib" "$RUNTIME_LIB_DIR/$(basename "$install_name")"
+  done < <(otool -L "$LOCAL_WHISPER_CLI" | awk '/@rpath\/(libwhisper|libggml)/ { print $1 }')
+
+  if command -v install_name_tool >/dev/null 2>&1; then
+    while IFS= read -r rpath; do
+      [[ -z "$rpath" ]] && continue
+      install_name_tool -delete_rpath "$rpath" "$BUNDLED_WHISPER_CLI" >/dev/null 2>&1 || true
+    done < <(otool -l "$BUNDLED_WHISPER_CLI" | awk '/LC_RPATH/ { in_rpath=1; next } in_rpath && /path / { print $2; in_rpath=0 }')
+    install_name_tool -add_rpath "@executable_path/../lib" "$BUNDLED_WHISPER_CLI"
+  fi
+
+  cp "$LOCAL_MODEL_PATH" "$MODELS_DIR/ggml-large-v3-turbo.bin"
+  echo "Bundled local runtime: $BUNDLED_WHISPER_CLI"
+  echo "Bundled local model: $MODELS_DIR/ggml-large-v3-turbo.bin"
 fi
 
 INFO_PLIST="$CONTENTS/Info.plist"

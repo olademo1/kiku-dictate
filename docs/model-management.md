@@ -10,7 +10,14 @@ Open `Advanced Runtime` to change any of those values. This makes future model u
 
 ## Default
 
-Fresh installs use:
+Fresh installs first look for bundled pilot resources inside the app:
+
+```text
+Dataiku Chirp.app/Contents/Resources/Runtime/bin/whisper-cli
+Dataiku Chirp.app/Contents/Resources/Models/ggml-large-v3-turbo.bin
+```
+
+If those are not present, fresh installs use:
 
 ```text
 ~/Library/Application Support/DataikuChirp/Models/ggml-large-v3-turbo.bin

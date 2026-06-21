@@ -8,6 +8,7 @@ The major difference is the security model: there is no OpenAI API key, no promp
 
 - Native SwiftUI macOS app.
 - Uses local `whisper-cli` with a local Whisper model file.
+- Pilot builds can bundle `whisper-cli`, required runtime libraries, and the model inside the app.
 - Default target model: `ggml-large-v3-turbo.bin`.
 - Stores only aggregate usage metrics.
 - Optional global usage dashboard sends cumulative aggregate counters only.
@@ -17,6 +18,8 @@ The major difference is the security model: there is no OpenAI API key, no promp
 ## Download For Testers
 
 Go to the repo's [Releases page](https://github.com/olademo1/kiku-dictate/releases), download the latest `DataikuChirp-macOS-*.zip`, unzip it, then drag `Dataiku Chirp.app` into `/Applications`.
+
+For the People team pilot, use an all-in-one release made by `./scripts/build_pilot_release.sh`. That bundled app includes `whisper-cli`, its required libraries, and `ggml-large-v3-turbo.bin`, so testers do not need to install Homebrew, find a CLI binary, or choose a model path.
 
 On first launch:
 
@@ -34,6 +37,13 @@ cd "/Users/rotimilademo/Documents/New project/KikuDictate"
 ./scripts/install_local_engine.sh
 ./scripts/build_app.sh
 ./scripts/install_app.sh
+```
+
+To build the all-in-one pilot app:
+
+```bash
+./scripts/install_local_engine.sh
+./scripts/build_pilot_release.sh
 ```
 
 The model file is large and is intentionally not committed to git. The helper installs it to:

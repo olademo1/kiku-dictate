@@ -15,6 +15,13 @@ final class LocalModelSettingsStore {
             return .default
         }
 
+        if !settings.isReady {
+            let defaultSettings = LocalModelSettings.default
+            if defaultSettings.isReady {
+                return defaultSettings
+            }
+        }
+
         return settings
     }
 
@@ -23,4 +30,3 @@ final class LocalModelSettingsStore {
         defaults.set(data, forKey: key)
     }
 }
-

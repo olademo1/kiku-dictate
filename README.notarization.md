@@ -31,6 +31,38 @@ The runtime helper installs `whisper-cpp` with Homebrew when possible and downlo
 
 For a managed company rollout, distribute `whisper-cli` and the model through MDM or an internal package instead of asking every user to download them.
 
+## Build A Self-Contained People Team Pilot
+
+For the first 7-10 person pilot, build an all-in-one app so coworkers do not need to install Homebrew, find `whisper-cli`, or choose a model path.
+
+First install the runtime once on the build Mac:
+
+```bash
+./scripts/install_local_engine.sh
+```
+
+Then create the bundled release:
+
+```bash
+./scripts/build_pilot_release.sh
+```
+
+This copies the local `whisper-cli`, required `whisper.cpp` dynamic libraries, and `ggml-large-v3-turbo.bin` into the app bundle:
+
+```text
+Dataiku Chirp.app/Contents/Resources/Runtime/bin/whisper-cli
+Dataiku Chirp.app/Contents/Resources/Runtime/lib/*.dylib
+Dataiku Chirp.app/Contents/Resources/Models/ggml-large-v3-turbo.bin
+```
+
+The resulting zip is large, roughly model-sized plus app/runtime overhead, but pilot users only need to download the zip, move the app to Applications, open it, pick their team, and grant microphone/accessibility permissions.
+
+To notarize the all-in-one build, provide notarization credentials and run:
+
+```bash
+DATAIKU_CHIRP_NOTARIZE=1 ./scripts/build_pilot_release.sh
+```
+
 ## Build And Install Locally
 
 Build with global usage tracking embedded if you are using the Google Apps Script dashboard:
