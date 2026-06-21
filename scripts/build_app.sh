@@ -8,7 +8,7 @@ APP_NAME="Dataiku Chirp"
 APP_BUNDLE="$APP_NAME.app"
 EXECUTABLE_NAME="KikuDictate"
 BUNDLE_ID="com.dataiku.chirp"
-VERSION="0.2.7"
+VERSION="0.3.0"
 BUILD_NUMBER="$(date +%Y%m%d%H%M%S)"
 ENTITLEMENTS_PLIST="$ROOT_DIR/KikuDictate.entitlements"
 GLOBAL_USAGE_ENDPOINT="${DATAIKU_CHIRP_USAGE_ENDPOINT:-}"
@@ -54,6 +54,21 @@ resolve_runtime_library() {
   done
 
   return 1
+}
+
+sign_bundled_runtime() {
+  local sign_identity="$1"
+  local runtime_root="$2"
+
+  if [[ ! -d "$runtime_root" ]]; then
+    return 0
+  fi
+
+  while IFS= read -r runtime_binary; do
+    [[ -z "$runtime_binary" ]] && continue
+    echo "Signing bundled runtime binary: $runtime_binary"
+    codesign --force --options runtime --timestamp --sign "$sign_identity" "$runtime_binary"
+  done < <(find "$runtime_root" -type f \( -perm -111 -o -name '*.dylib' \))
 }
 
 echo "Building release binary..."
@@ -239,7 +254,8 @@ if command -v codesign >/dev/null 2>&1; then
   if [[ -n "$SIGN_IDENTITY" ]]; then
     echo "Signing with identity: $SIGN_IDENTITY"
     ./scripts/scrub_app_metadata.sh "$STAGED_APP"
-    codesign --force --deep --options runtime "${CODESIGN_ENTITLEMENTS[@]}" --sign "$SIGN_IDENTITY" "$STAGED_APP"
+    sign_bundled_runtime "$SIGN_IDENTITY" "$RESOURCES_DIR/Runtime"
+    codesign --force --deep --options runtime --timestamp "${CODESIGN_ENTITLEMENTS[@]}" --sign "$SIGN_IDENTITY" "$STAGED_APP"
   else
     echo "Signing ad-hoc."
     ./scripts/scrub_app_metadata.sh "$STAGED_APP"

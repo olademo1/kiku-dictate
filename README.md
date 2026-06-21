@@ -19,7 +19,7 @@ The major difference is the security model: there is no OpenAI API key, no promp
 
 Go to the repo's [Releases page](https://github.com/olademo1/kiku-dictate/releases), download the latest `DataikuChirp-macOS-*.zip`, unzip it, then open `Dataiku Chirp.app`.
 
-For the People team pilot, use an all-in-one release made by `./scripts/build_pilot_release.sh`. That bundled app includes `whisper-cli`, its required libraries, and `ggml-large-v3-turbo.bin`, so testers do not need to install Homebrew, find a CLI binary, or choose a model path.
+For the People team pilot, use an all-in-one release made by `./scripts/build_pilot_release.sh`. That bundled app includes `whisper-cli`, its required libraries, and `ggml-large-v3-turbo.bin`, so testers do not need to install Homebrew, find a CLI binary, or choose a model path. The pilot release is signed and notarized with the current Developer ID identity on the build Mac.
 
 On first launch:
 

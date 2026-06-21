@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Dataiku Chirp is a local-first voice-to-text pilot app for Dataiku People team workflows.">
+    <title>Dataiku Chirp</title>
+    <link rel="icon" href="/assets/app-icon-1024.png">
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="Dataiku Chirp home">
+        <img src="/assets/dataiku-bird-speech-header.png" alt="">
+        <span>Dataiku Chirp</span>
+      </a>
+      <nav aria-label="Page sections">
+        <a href="#trust">Trust</a>
+        <a href="#install">Install</a>
+        <a href="https://github.com/olademo1/kiku-dictate">Source</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">People team pilot for macOS</p>
+          <h1>Fast voice-to-text without sending audio to a transcription API.</h1>
+          <p class="lede">
+            Dataiku Chirp runs Whisper large-v3 turbo locally on your Mac. It records a temporary audio file,
+            transcribes it on-device, pastes the result where your cursor is, then deletes the temporary audio.
+          </p>
+          <div class="actions">
+            <a class="primary" href="/download">Download for Mac</a>
+            <a class="secondary" href="https://github.com/olademo1/kiku-dictate">View source</a>
+          </div>
+          <p class="pilot-note">
+            Pilot build signed and notarized with Oluwarotimi Lademo's Apple Developer ID. This is not yet an official Dataiku IT-owned distribution.
+          </p>
+        </div>
+
+        <div class="app-card" aria-label="Dataiku Chirp app preview">
+          <div class="window-bar">
+            <span></span><span></span><span></span>
+            <strong>Dataiku Chirp</strong>
+          </div>
+          <div class="app-preview">
+            <div class="preview-title">
+              <img src="/assets/app-icon-1024.png" alt="">
+              <div>
+                <h2>Local dictation</h2>
+                <p>Ready after setup</p>
+              </div>
+            </div>
+            <div class="metric-grid">
+              <div><span>Words</span><strong>12,840</strong></div>
+              <div><span>Time saved</span><strong>8.1h</strong></div>
+              <div><span>Spend avoided</span><strong>$8.02</strong></div>
+            </div>
+            <div class="pill-preview">
+              <div class="wave"><i></i><i></i><i></i><i></i><i></i></div>
+              <span>Recording</span>
+              <b>mic</b>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="trust" class="section">
+        <div class="section-heading">
+          <p class="eyebrow">Trust defaults</p>
+          <h2>Built to be easy to explain.</h2>
+        </div>
+        <div class="trust-grid">
+          <article>
+            <h3>Local transcription</h3>
+            <p>Audio is processed by a bundled local Whisper runtime and model. The app does not call OpenAI, Apple Speech Recognition, or another transcription API.</p>
+          </article>
+          <article>
+            <h3>No transcript history</h3>
+            <p>Dataiku Chirp stores aggregate usage counts, not dictated text. Temporary audio is deleted after transcription or failure.</p>
+          </article>
+          <article>
+            <h3>Open source pilot</h3>
+            <p>The code is public for review. The pilot download is built from the same repository and bundled so teammates do not need Homebrew.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="install" class="section install">
+        <div>
+          <p class="eyebrow">Install</p>
+          <h2>Download, open, move, approve.</h2>
+          <p>
+            The first launch offers to move Dataiku Chirp into Applications and relaunch. After that, macOS will ask for microphone access.
+            Enable Accessibility only if you want automatic paste into the active app.
+          </p>
+        </div>
+        <ol>
+          <li>Download the Mac zip.</li>
+          <li>Open Dataiku Chirp and choose <strong>Move and Relaunch</strong>.</li>
+          <li>Choose your team during setup.</li>
+          <li>Approve Microphone and, optionally, Accessibility.</li>
+        </ol>
+      </section>
+
+      <section class="download-panel" aria-label="Download">
+        <div>
+          <h2>Dataiku Chirp v0.3.0</h2>
+          <p>Signed, notarized, all-in-one Apple Silicon pilot build with Whisper large-v3 turbo included.</p>
+        </div>
+        <div class="download-actions">
+          <a class="primary" href="/download">Download zip</a>
+          <a class="secondary" href="/checksum">Checksum</a>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <span>People team pilot</span>
+      <a href="https://github.com/olademo1/kiku-dictate">GitHub</a>
+      <a href="https://github.com/olademo1/kiku-dictate/releases/latest">Release notes</a>
+    </footer>
+  </body>
+</html>
