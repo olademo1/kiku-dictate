@@ -17,16 +17,17 @@ The major difference is the security model: there is no OpenAI API key, no promp
 
 ## Download For Testers
 
-Go to the repo's [Releases page](https://github.com/olademo1/kiku-dictate/releases), download the latest `DataikuChirp-macOS-*.zip`, unzip it, then drag `Dataiku Chirp.app` into `/Applications`.
+Go to the repo's [Releases page](https://github.com/olademo1/kiku-dictate/releases), download the latest `DataikuChirp-macOS-*.zip`, unzip it, then open `Dataiku Chirp.app`.
 
 For the People team pilot, use an all-in-one release made by `./scripts/build_pilot_release.sh`. That bundled app includes `whisper-cli`, its required libraries, and `ggml-large-v3-turbo.bin`, so testers do not need to install Homebrew, find a CLI binary, or choose a model path.
 
 On first launch:
 
 1. Open `Dataiku Chirp.app`.
-2. Allow microphone access.
-3. Enable Accessibility only if you want automatic paste into the active app.
-4. Press the configured shortcut or the `Record` button.
+2. If prompted, choose `Move and Relaunch`.
+3. Allow microphone access.
+4. Enable Accessibility only if you want automatic paste into the active app.
+5. Press the configured shortcut or the `Record` button.
 
 If macOS blocks the app because it has not been notarized yet, open it from Finder by right-clicking `Dataiku Chirp.app` and choosing `Open`. This prototype is Developer ID signed locally but not yet notarized for broad external distribution.
 

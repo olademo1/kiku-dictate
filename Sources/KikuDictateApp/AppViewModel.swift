@@ -90,6 +90,7 @@ final class AppViewModel: ObservableObject {
     private var globalUsageSyncTask: Task<Void, Never>?
     private var appActivatedObserver: Any?
     private var accessibilityRefreshTask: Task<Void, Never>?
+    private var didOfferApplicationsInstall = false
 
     init() {
         let storedMode = UserDefaults.standard.string(forKey: persistentStartModeKey)
@@ -385,6 +386,78 @@ final class AppViewModel: ObservableObject {
         let appURL = Bundle.main.bundleURL
         NSWorkspace.shared.openApplication(at: appURL, configuration: NSWorkspace.OpenConfiguration()) { _, _ in
             NSApp.terminate(nil)
+        }
+    }
+
+    func promptForApplicationsInstallIfNeeded(afterDismiss: @escaping @MainActor () -> Void) -> Bool {
+        guard !didOfferApplicationsInstall else { return false }
+        guard let suggestion = ApplicationInstallService.suggestion() else { return false }
+
+        didOfferApplicationsInstall = true
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
+            guard let self else {
+                afterDismiss()
+                return
+            }
+
+            let alert = NSAlert()
+            alert.alertStyle = .informational
+            alert.messageText = "Move Dataiku Chirp to Applications?"
+            alert.informativeText = "This helps macOS keep microphone and Accessibility permissions attached to Dataiku Chirp. The app will relaunch after it moves itself to \(suggestion.destinationLabel)."
+            alert.addButton(withTitle: "Move and Relaunch")
+            alert.addButton(withTitle: "Not Now")
+
+            let handleResponse: (NSApplication.ModalResponse) -> Void = { [weak self] response in
+                Task { @MainActor in
+                    guard let self else {
+                        afterDismiss()
+                        return
+                    }
+
+                    if response == .alertFirstButtonReturn {
+                        await self.moveToApplicationsAndRelaunch(suggestion, afterFailure: afterDismiss)
+                    } else {
+                        ApplicationInstallService.markSkipped(suggestion)
+                        afterDismiss()
+                    }
+                }
+            }
+
+            if let window = NSApp.windows.first(where: { $0.isVisible && !($0 is NSPanel) }) {
+                alert.beginSheetModal(for: window, completionHandler: handleResponse)
+            } else {
+                handleResponse(alert.runModal())
+            }
+        }
+
+        return true
+    }
+
+    private func moveToApplicationsAndRelaunch(
+        _ suggestion: ApplicationInstallSuggestion,
+        afterFailure: @escaping @MainActor () -> Void
+    ) async {
+        statusMessage = "Moving Dataiku Chirp to \(suggestion.destinationLabel)..."
+
+        do {
+            let destinationURL = try await ApplicationInstallService.install(suggestion)
+            statusMessage = "Relaunching Dataiku Chirp from Applications..."
+
+            let configuration = NSWorkspace.OpenConfiguration()
+            NSWorkspace.shared.openApplication(at: destinationURL, configuration: configuration) { [weak self] _, error in
+                Task { @MainActor in
+                    if let error {
+                        self?.statusMessage = "Moved Dataiku Chirp, but could not relaunch: \(error.localizedDescription)"
+                        afterFailure()
+                    } else {
+                        NSApp.terminate(nil)
+                    }
+                }
+            }
+        } catch {
+            statusMessage = "Could not move Dataiku Chirp automatically: \(error.localizedDescription)"
+            afterFailure()
         }
     }
 

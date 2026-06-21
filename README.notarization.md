@@ -55,7 +55,7 @@ Dataiku Chirp.app/Contents/Resources/Runtime/lib/*.dylib
 Dataiku Chirp.app/Contents/Resources/Models/ggml-large-v3-turbo.bin
 ```
 
-The resulting zip is large, roughly model-sized plus app/runtime overhead, but pilot users only need to download the zip, move the app to Applications, open it, pick their team, and grant microphone/accessibility permissions.
+The resulting zip is large, roughly model-sized plus app/runtime overhead, but pilot users only need to download the zip, open the app, accept the `Move and Relaunch` prompt, pick their team, and grant microphone/accessibility permissions. If `/Applications` is not writable, Dataiku Chirp falls back to `~/Applications` so the move does not require admin rights.
 
 The bundled app uses the architecture of the Mac that built it. A build made on an Apple Silicon Mac with Homebrew in `/opt/homebrew` is typically `arm64`. Confirm the pilot users are on Apple Silicon Macs before sharing one build broadly; Intel Macs need a separate compatible build or a universal runtime.
 

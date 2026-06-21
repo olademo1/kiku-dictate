@@ -238,19 +238,20 @@ if command -v codesign >/dev/null 2>&1; then
 
   if [[ -n "$SIGN_IDENTITY" ]]; then
     echo "Signing with identity: $SIGN_IDENTITY"
-    xattr -cr "$STAGED_APP" >/dev/null 2>&1 || true
+    ./scripts/scrub_app_metadata.sh "$STAGED_APP"
     codesign --force --deep --options runtime "${CODESIGN_ENTITLEMENTS[@]}" --sign "$SIGN_IDENTITY" "$STAGED_APP"
   else
     echo "Signing ad-hoc."
-    xattr -cr "$STAGED_APP" >/dev/null 2>&1 || true
+    ./scripts/scrub_app_metadata.sh "$STAGED_APP"
     codesign --force --deep "${CODESIGN_ENTITLEMENTS[@]}" --sign - "$STAGED_APP"
   fi
 
+  ./scripts/scrub_app_metadata.sh "$STAGED_APP"
   codesign --verify --deep --strict --verbose=2 "$STAGED_APP"
 fi
 
 ditto --norsrc "$STAGED_APP" "$OUT_APP"
-xattr -cr "$OUT_APP" >/dev/null 2>&1 || true
+./scripts/scrub_app_metadata.sh "$OUT_APP"
 
 echo "Built app: $OUT_APP"
 echo "Note: install script re-signs after copying out of file-provider folders."

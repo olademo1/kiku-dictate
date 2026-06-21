@@ -41,7 +41,12 @@ struct MainView: View {
             modelNameInput = viewModel.localModelSettings.modelName
             viewModel.refreshSetupStatus(showReadyMessage: false)
             resizeMainWindowToDashboard()
-            presentTeamSelectionIfNeeded(settings: viewModel.globalUsageSettings)
+            let didPromptForMove = viewModel.promptForApplicationsInstallIfNeeded {
+                presentTeamSelectionIfNeeded(settings: viewModel.globalUsageSettings)
+            }
+            if !didPromptForMove {
+                presentTeamSelectionIfNeeded(settings: viewModel.globalUsageSettings)
+            }
         }
         .onChange(of: viewModel.localModelSettings) { settings in
             enginePathInput = settings.enginePath
