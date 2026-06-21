@@ -1,6 +1,7 @@
 import Foundation
 
 enum DataikuTeam: String, CaseIterable, Codable, Identifiable {
+    case unidentified = "Unidentified"
     case engineering = "Engineering"
     case product = "Product"
     case goToMarket = "Go-to-Market"
@@ -12,9 +13,16 @@ enum DataikuTeam: String, CaseIterable, Codable, Identifiable {
     case itSecurity = "IT/Security"
     case operations = "Operations"
     case strategy = "Strategy"
-    case other = "Other"
 
     var id: String { rawValue }
+
+    var needsSelection: Bool {
+        self == .unidentified
+    }
+
+    static var selectableCases: [DataikuTeam] {
+        allCases.filter { !$0.needsSelection }
+    }
 }
 
 enum GlobalUsageConfiguration {
@@ -48,10 +56,14 @@ struct GlobalUsageSettings: Codable, Equatable {
         GlobalUsageConfiguration.isConfigured
     }
 
+    var requiresTeamSelection: Bool {
+        enabled && isConfigured && team.needsSelection
+    }
+
     static func defaultSettings(installationId: String) -> GlobalUsageSettings {
         GlobalUsageSettings(
-            enabled: false,
-            team: .other,
+            enabled: true,
+            team: .unidentified,
             installationId: installationId,
             lastSyncedAt: nil
         )

@@ -94,7 +94,7 @@ function upsertInstallation_(sheet, payload) {
 
   const row = [
     installationId,
-    String(payload.teamName || 'Other'),
+    String(payload.teamName || 'Unidentified'),
     new Date(),
     String(payload.appVersion || ''),
     String(payload.modelName || ''),
