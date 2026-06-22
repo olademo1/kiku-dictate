@@ -144,6 +144,10 @@ tell application "Finder"
 end tell
 OSA
 
+echo "Scrubbing app metadata after Finder layout..."
+xattr -cr "$MOUNT_POINT/Dataiku Chirp.app" 2>/dev/null || true
+/usr/bin/codesign --verify --deep --strict --verbose=2 "$MOUNT_POINT/Dataiku Chirp.app"
+
 sync
 hdiutil detach "$MOUNT_POINT" -quiet
 MOUNT_POINT=""

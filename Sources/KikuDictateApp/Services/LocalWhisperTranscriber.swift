@@ -86,7 +86,8 @@ final class LocalWhisperTranscriber {
             throw LocalWhisperTranscriberError.transcriptMissing
         }
 
-        let cleaned = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleaned = TranscriptionGlossaryNormalizer
+            .normalize(text.trimmingCharacters(in: .whitespacesAndNewlines))
         guard !cleaned.isEmpty else {
             throw LocalWhisperTranscriberError.transcriptMissing
         }

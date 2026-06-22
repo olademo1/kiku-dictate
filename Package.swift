@@ -13,6 +13,11 @@ let package = Package(
         .executableTarget(
             name: "KikuDictateApp",
             path: "Sources/KikuDictateApp"
+        ),
+        .testTarget(
+            name: "KikuDictateAppTests",
+            dependencies: ["KikuDictateApp"],
+            path: "Tests/KikuDictateAppTests"
         )
     ]
 )
