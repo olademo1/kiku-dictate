@@ -11,6 +11,7 @@ struct MainView: View {
     @State private var showAdvancedRuntime = false
     @State private var showGlobalUsage = false
     @State private var showRequiredTeamSelection = false
+    @State private var didOfferTeamSelection = false
     @State private var teamSelectionDraft = DataikuTeam.unidentified
 
     var body: some View {
@@ -58,7 +59,7 @@ struct MainView: View {
         }
         .sheet(isPresented: $showRequiredTeamSelection) {
             requiredTeamSelectionSheet
-                .interactiveDismissDisabled(viewModel.globalUsageSettings.requiresTeamSelection)
+                .interactiveDismissDisabled(false)
         }
     }
 
@@ -198,37 +199,17 @@ struct MainView: View {
                 )) {
                     ForEach(DataikuTeam.allCases) { team in
                         Text(team.rawValue).tag(team)
-                            .disabled(team.needsSelection)
                     }
                 }
                 .pickerStyle(.menu)
                 .labelsHidden()
             }
 
-            if viewModel.globalUsageSettings.requiresTeamSelection {
-                Label("Choose a team before stats can sync.", systemImage: "exclamationmark.circle")
+            if viewModel.globalUsageSettings.shouldPromptForTeamSelection {
+                Label("Syncing as Unidentified until a team is selected.", systemImage: "info.circle")
                     .font(.caption2.weight(.medium))
                     .foregroundStyle(Palette.orange)
             }
-
-            HStack(spacing: 8) {
-                Button {
-                    viewModel.syncGlobalUsageNow()
-                } label: {
-                    Label("Sync", systemImage: "arrow.triangle.2.circlepath")
-                }
-                .disabled(viewModel.isSyncingGlobalUsage || viewModel.globalUsageSettings.requiresTeamSelection)
-
-                Button {
-                    viewModel.refreshGlobalUsage()
-                } label: {
-                    Label("Refresh", systemImage: "arrow.clockwise")
-                }
-                .disabled(viewModel.isSyncingGlobalUsage)
-
-                Spacer()
-            }
-            .controlSize(.small)
 
             Label("Aggregate only: no audio or transcript text.", systemImage: "lock.shield")
                 .font(.caption2.weight(.medium))
@@ -247,14 +228,13 @@ struct MainView: View {
                 .font(.system(size: 18, weight: .bold))
                 .foregroundStyle(Palette.ink)
 
-            Text("Dataiku Chirp shares aggregate usage counters by default. Pick your team so global stats are attributed correctly.")
+            Text("Dataiku Chirp shares aggregate usage counters by default. You can skip this for now; usage will sync as Unidentified and move to your team when you choose one.")
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(Palette.muted)
                 .fixedSize(horizontal: false, vertical: true)
 
             Picker("Team", selection: $teamSelectionDraft) {
                 Text("Unidentified").tag(DataikuTeam.unidentified)
-                    .disabled(true)
                 ForEach(DataikuTeam.selectableCases) { team in
                     Text(team.rawValue).tag(team)
                 }
@@ -265,10 +245,9 @@ struct MainView: View {
 
             HStack {
                 Button {
-                    viewModel.setGlobalUsageSharing(false)
                     showRequiredTeamSelection = false
                 } label: {
-                    Text("Turn Off Sharing")
+                    Text("Not Now")
                 }
 
                 Spacer()
@@ -281,7 +260,6 @@ struct MainView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(Palette.green)
-                .disabled(teamSelectionDraft.needsSelection)
             }
         }
         .padding(22)
@@ -291,15 +269,15 @@ struct MainView: View {
 
     private var teamSetupSubtitle: String {
         if !viewModel.globalUsageSettings.enabled { return "Sharing off" }
-        if viewModel.globalUsageSettings.requiresTeamSelection { return "Required" }
         return viewModel.globalUsageSettings.team.rawValue
     }
 
     private func presentTeamSelectionIfNeeded(settings: GlobalUsageSettings) {
-        if settings.requiresTeamSelection {
+        if settings.shouldPromptForTeamSelection && !didOfferTeamSelection {
             teamSelectionDraft = settings.team
+            didOfferTeamSelection = true
             showRequiredTeamSelection = true
-        } else {
+        } else if !settings.shouldPromptForTeamSelection {
             showRequiredTeamSelection = false
         }
     }
@@ -349,9 +327,9 @@ struct MainView: View {
                     title: "Team",
                     subtitle: teamSetupSubtitle,
                     systemImage: "building.2",
-                    isOn: !viewModel.globalUsageSettings.requiresTeamSelection,
-                    actionTitle: viewModel.globalUsageSettings.requiresTeamSelection ? "Choose" : nil,
-                    action: viewModel.globalUsageSettings.requiresTeamSelection ? { showRequiredTeamSelection = true } : nil
+                    isOn: viewModel.globalUsageSettings.enabled,
+                    actionTitle: viewModel.globalUsageSettings.shouldPromptForTeamSelection ? "Choose" : nil,
+                    action: viewModel.globalUsageSettings.shouldPromptForTeamSelection ? { showRequiredTeamSelection = true } : nil
                 )
             }
         }

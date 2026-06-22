@@ -25,6 +25,29 @@ if [[ ! -d "$APP_PATH" ]]; then
   exit 1
 fi
 
+if [[ "${DATAIKU_CHIRP_ALLOW_UNCONFIGURED_USAGE:-0}" != "1" ]]; then
+  INFO_PLIST="$APP_PATH/Contents/Info.plist"
+  USAGE_ENDPOINT="$(/usr/libexec/PlistBuddy -c 'Print :DataikuChirpUsageEndpoint' "$INFO_PLIST" 2>/dev/null || true)"
+  USAGE_TEAM_KEY="$(/usr/libexec/PlistBuddy -c 'Print :DataikuChirpUsageTeamKey' "$INFO_PLIST" 2>/dev/null || true)"
+  if [[ -z "$USAGE_ENDPOINT" || -z "$USAGE_TEAM_KEY" ]]; then
+    cat >&2 <<EOF
+ERROR: refusing to package a pilot DMG without global usage reporting configured.
+
+App bundle: $APP_PATH
+
+Rebuild the app with:
+  DATAIKU_CHIRP_USAGE_ENDPOINT="https://script.google.com/macros/s/.../exec" \\
+  DATAIKU_CHIRP_USAGE_TEAM_KEY="shared-secret" \\
+  DATAIKU_CHIRP_REQUIRE_USAGE_CONFIG=1 \\
+  DATAIKU_CHIRP_BUNDLE_LOCAL_RUNTIME=1 \\
+  ./scripts/build_app.sh
+
+For a deliberately local-only DMG, set DATAIKU_CHIRP_ALLOW_UNCONFIGURED_USAGE=1.
+EOF
+    exit 1
+  fi
+fi
+
 mkdir -p "$RELEASE_DIR"
 rm -f "$OUTPUT_DMG" "$SHA_PATH"
 

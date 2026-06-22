@@ -119,6 +119,10 @@ final class AppViewModel: ObservableObject {
 
         if globalUsageSettings.isConfigured {
             refreshGlobalUsage()
+            if globalUsageSettings.enabled,
+               globalUsageSettings.lastSyncedAt == nil {
+                syncGlobalUsageIfNeeded(force: true)
+            }
         }
 
         appActivatedObserver = NotificationCenter.default.addObserver(
@@ -510,7 +514,7 @@ final class AppViewModel: ObservableObject {
         publishIfChanged(\.hasMicrophonePermission, newHasMicrophonePermission)
         publishIfChanged(\.hasAccessibilityPermission, newHasAccessibilityPermission)
         publishIfChanged(\.autoPasteReady, newHasAccessibilityPermission)
-        publishIfChanged(\.setupComplete, localModelSettings.isReady && newHasMicrophonePermission && !globalUsageSettings.requiresTeamSelection)
+        publishIfChanged(\.setupComplete, localModelSettings.isReady && newHasMicrophonePermission)
 
         if showReadyMessage && setupComplete {
             if autoPasteReady {
@@ -518,8 +522,6 @@ final class AppViewModel: ObservableObject {
             } else {
                 publishIfChanged(\.statusMessage, "Setup complete. Auto-paste is off until Accessibility is enabled.")
             }
-        } else if showReadyMessage && globalUsageSettings.requiresTeamSelection {
-            publishIfChanged(\.statusMessage, "Setup incomplete: choose your team or turn off team stats sharing.")
         }
     }
 
@@ -560,11 +562,6 @@ final class AppViewModel: ObservableObject {
                 base = "Setup incomplete: microphone permission is required."
             }
             statusMessage = ([base] + warnings).joined(separator: " ")
-            return
-        }
-
-        if globalUsageSettings.requiresTeamSelection {
-            statusMessage = (["Setup incomplete: choose your team or turn off team stats sharing."] + warnings).joined(separator: " ")
             return
         }
 
@@ -650,8 +647,8 @@ final class AppViewModel: ObservableObject {
             globalUsageStatus = "Team stats sharing is off."
         } else if !globalUsageSettings.isConfigured {
             globalUsageStatus = "Team stats endpoint is not configured in this build."
-        } else if globalUsageSettings.requiresTeamSelection {
-            globalUsageStatus = "Choose your team before sharing aggregate stats."
+        } else if globalUsageSettings.team.needsSelection {
+            globalUsageStatus = "Team stats sync as Unidentified until a team is selected."
         } else if let lastSyncedAt = globalUsageSettings.lastSyncedAt {
             globalUsageStatus = "Team stats synced \(lastSyncedAt.formatted(date: .omitted, time: .shortened))."
         } else {
@@ -691,11 +688,6 @@ final class AppViewModel: ObservableObject {
             globalUsageStatus = "Team stats endpoint is not configured in this build."
             return
         }
-        guard !globalUsageSettings.requiresTeamSelection else {
-            globalUsageStatus = "Choose your team before sharing aggregate stats."
-            return
-        }
-
         if !force,
            let lastSyncedAt = globalUsageSettings.lastSyncedAt,
            Date().timeIntervalSince(lastSyncedAt) < 15 * 60 {
@@ -982,7 +974,7 @@ final class AppViewModel: ObservableObject {
 
         usageRecords = usageStore.add(record)
         usageSummary = UsageSummary.from(records: usageRecords)
-        syncGlobalUsageIfNeeded(force: false)
+        syncGlobalUsageIfNeeded(force: true)
     }
 
     private func openSystemSettings(urlStrings: [String]) -> Bool {

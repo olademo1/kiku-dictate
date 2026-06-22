@@ -20,7 +20,9 @@ trap cleanup EXIT
 mkdir -p "$RELEASE_DIR"
 
 echo "Building Dataiku Chirp with bundled local runtime..."
-DATAIKU_CHIRP_BUNDLE_LOCAL_RUNTIME=1 ./scripts/build_app.sh
+DATAIKU_CHIRP_BUNDLE_LOCAL_RUNTIME=1 \
+DATAIKU_CHIRP_REQUIRE_USAGE_CONFIG="${DATAIKU_CHIRP_REQUIRE_USAGE_CONFIG:-1}" \
+  ./scripts/build_app.sh
 
 if [[ ! -d "$APP_PATH" ]]; then
   echo "App bundle not found after build: $APP_PATH"

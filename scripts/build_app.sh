@@ -17,6 +17,21 @@ BUNDLE_LOCAL_RUNTIME="${DATAIKU_CHIRP_BUNDLE_LOCAL_RUNTIME:-0}"
 LOCAL_WHISPER_CLI="${DATAIKU_CHIRP_WHISPER_CLI_PATH:-$(command -v whisper-cli || true)}"
 LOCAL_MODEL_PATH="${DATAIKU_CHIRP_MODEL_PATH:-}"
 
+if [[ "${DATAIKU_CHIRP_REQUIRE_USAGE_CONFIG:-0}" == "1" ]]; then
+  if [[ -z "$GLOBAL_USAGE_ENDPOINT" || -z "$GLOBAL_USAGE_TEAM_KEY" ]]; then
+    cat >&2 <<'EOF'
+ERROR: global usage reporting is required for this build, but the endpoint or team key is missing.
+
+Set both values before building:
+  DATAIKU_CHIRP_USAGE_ENDPOINT="https://script.google.com/macros/s/.../exec"
+  DATAIKU_CHIRP_USAGE_TEAM_KEY="shared-secret"
+
+For a deliberately local-only build, unset DATAIKU_CHIRP_REQUIRE_USAGE_CONFIG or set it to 0.
+EOF
+    exit 1
+  fi
+fi
+
 find_default_model() {
   local candidates=(
     "$HOME/Library/Application Support/DataikuChirp/Models/ggml-large-v3-turbo.bin"

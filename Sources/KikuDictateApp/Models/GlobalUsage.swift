@@ -56,7 +56,7 @@ struct GlobalUsageSettings: Codable, Equatable {
         GlobalUsageConfiguration.isConfigured
     }
 
-    var requiresTeamSelection: Bool {
+    var shouldPromptForTeamSelection: Bool {
         enabled && isConfigured && team.needsSelection
     }
 
