@@ -29,15 +29,20 @@ enum LocalWhisperTranscriberError: LocalizedError {
 }
 
 final class LocalWhisperTranscriber {
-    func transcribe(audioURL: URL, settings: LocalModelSettings) async throws -> LocalTranscriptionResult {
+    func transcribe(
+        audioURL: URL,
+        settings: LocalModelSettings,
+        replacementRules: [TranscriptionReplacementRule]
+    ) async throws -> LocalTranscriptionResult {
         try await Task.detached(priority: .userInitiated) {
-            try Self.transcribeSynchronously(audioURL: audioURL, settings: settings)
+            try Self.transcribeSynchronously(audioURL: audioURL, settings: settings, replacementRules: replacementRules)
         }.value
     }
 
     private static func transcribeSynchronously(
         audioURL: URL,
-        settings: LocalModelSettings
+        settings: LocalModelSettings,
+        replacementRules: [TranscriptionReplacementRule]
     ) throws -> LocalTranscriptionResult {
         let fileManager = FileManager.default
 
@@ -87,7 +92,7 @@ final class LocalWhisperTranscriber {
         }
 
         let cleaned = TranscriptionGlossaryNormalizer
-            .normalize(text.trimmingCharacters(in: .whitespacesAndNewlines))
+            .normalize(text.trimmingCharacters(in: .whitespacesAndNewlines), using: replacementRules)
         guard !cleaned.isEmpty else {
             throw LocalWhisperTranscriberError.transcriptMissing
         }

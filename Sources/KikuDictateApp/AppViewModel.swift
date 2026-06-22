@@ -49,10 +49,12 @@ final class AppViewModel: ObservableObject {
     @Published var globalUsageSnapshot = GlobalUsageSnapshot.empty
     @Published var globalUsageStatus = "Team stats sharing is off."
     @Published var isSyncingGlobalUsage = false
+    @Published var transcriptionReplacementRules: [TranscriptionReplacementRule]
 
     private let hotkeyStore = HotkeyStore()
     private let hotkeyMonitor = HotkeyMonitor()
     private let modelSettingsStore = LocalModelSettingsStore()
+    private let transcriptionReplacementStore = TranscriptionReplacementStore()
     private let usageStore = UsageStore()
     private let globalUsageSettingsStore = GlobalUsageSettingsStore()
     private let globalUsageClient = GlobalUsageClient()
@@ -102,6 +104,7 @@ final class AppViewModel: ObservableObject {
         allowSingleKeyShortcuts = storedAllowSingleKeyShortcuts
         hotkey = hotkeyStore.load(allowSingleKey: storedAllowSingleKeyShortcuts)
         localModelSettings = modelSettingsStore.load()
+        transcriptionReplacementRules = transcriptionReplacementStore.load()
         globalUsageSettings = globalUsageSettingsStore.load()
         usageRecords = usageStore.load()
         usageStoragePath = usageStore.location.path
@@ -211,6 +214,64 @@ final class AppViewModel: ObservableObject {
     func resetModelSettings() {
         saveModelSettings(.default)
         statusMessage = "Local model settings reset."
+    }
+
+    func addTranscriptionReplacement(trigger: String, replacement: String) {
+        let cleanedTrigger = trigger.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleanedReplacement = replacement.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !cleanedTrigger.isEmpty, !cleanedReplacement.isEmpty else {
+            statusMessage = "Add both the heard phrase and replacement."
+            return
+        }
+
+        var next = transcriptionReplacementRules
+        if let existingIndex = next.firstIndex(where: {
+            $0.cleanedTrigger.caseInsensitiveCompare(cleanedTrigger) == .orderedSame
+        }) {
+            next[existingIndex].replacement = cleanedReplacement
+            next[existingIndex].isEnabled = true
+            saveTranscriptionReplacementRules(next)
+            statusMessage = "Dictionary replacement updated."
+            return
+        }
+
+        next.append(TranscriptionReplacementRule(trigger: cleanedTrigger, replacement: cleanedReplacement))
+        saveTranscriptionReplacementRules(next)
+        statusMessage = "Dictionary replacement added."
+    }
+
+    func updateTranscriptionReplacement(
+        id: UUID,
+        trigger: String? = nil,
+        replacement: String? = nil,
+        isEnabled: Bool? = nil
+    ) {
+        var next = transcriptionReplacementRules
+        guard let index = next.firstIndex(where: { $0.id == id }) else { return }
+
+        if let trigger {
+            next[index].trigger = trigger
+        }
+        if let replacement {
+            next[index].replacement = replacement
+        }
+        if let isEnabled {
+            next[index].isEnabled = isEnabled
+        }
+
+        saveTranscriptionReplacementRules(next)
+    }
+
+    func deleteTranscriptionReplacement(id: UUID) {
+        let next = transcriptionReplacementRules.filter { $0.id != id }
+        saveTranscriptionReplacementRules(next)
+        statusMessage = "Dictionary replacement deleted."
+    }
+
+    func resetTranscriptionReplacements() {
+        transcriptionReplacementRules = transcriptionReplacementStore.reset()
+        statusMessage = "Dictionary reset to starter replacements."
     }
 
     func openModelFolder() {
@@ -635,6 +696,11 @@ final class AppViewModel: ObservableObject {
         refreshSetupStatus(showReadyMessage: false)
     }
 
+    private func saveTranscriptionReplacementRules(_ rules: [TranscriptionReplacementRule]) {
+        transcriptionReplacementRules = rules
+        transcriptionReplacementStore.save(rules)
+    }
+
     private func saveGlobalUsageSettings(_ settings: GlobalUsageSettings) {
         globalUsageSettings = settings
         globalUsageSettingsStore.save(settings)
@@ -907,7 +973,11 @@ final class AppViewModel: ObservableObject {
         statusMessage = "Transcribing locally..."
 
         do {
-            let transcription = try await transcriber.transcribe(audioURL: outcome.url, settings: localModelSettings)
+            let transcription = try await transcriber.transcribe(
+                audioURL: outcome.url,
+                settings: localModelSettings,
+                replacementRules: transcriptionReplacementRules
+            )
             try? FileManager.default.removeItem(at: outcome.url)
             handleCompletedTranscript(transcription, duration: outcome.duration)
         } catch {

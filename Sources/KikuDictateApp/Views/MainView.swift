@@ -10,6 +10,9 @@ struct MainView: View {
     @State private var modelNameInput = ""
     @State private var showAdvancedRuntime = false
     @State private var showGlobalUsage = false
+    @State private var showDictionary = false
+    @State private var dictionaryTriggerInput = ""
+    @State private var dictionaryReplacementInput = ""
     @State private var showRequiredTeamSelection = false
     @State private var didOfferTeamSelection = false
     @State private var teamSelectionDraft = DataikuTeam.unidentified
@@ -267,6 +270,81 @@ struct MainView: View {
         .background(Palette.canvas)
     }
 
+    private var customDictionaryPopover: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Label("Custom Dictionary", systemImage: "textformat.abc")
+                    .font(.headline)
+                    .foregroundStyle(Palette.ink)
+                Spacer()
+                Button("Done") {
+                    showDictionary = false
+                }
+                .controlSize(.small)
+            }
+
+            Text("These replacements run after local transcription. They do not use prompts, audio upload, or saved transcripts.")
+                .font(.caption)
+                .foregroundStyle(Palette.muted)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 8) {
+                TextField("Heard as", text: $dictionaryTriggerInput)
+                    .textFieldStyle(.roundedBorder)
+
+                Text("->")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Palette.muted)
+
+                TextField("Replace with", text: $dictionaryReplacementInput)
+                    .textFieldStyle(.roundedBorder)
+
+                Button {
+                    addDictionaryRuleFromInputs()
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .disabled(!canAddDictionaryRule)
+            }
+            .controlSize(.small)
+
+            Divider()
+
+            if viewModel.transcriptionReplacementRules.isEmpty {
+                Text("No replacements yet.")
+                    .font(.caption)
+                    .foregroundStyle(Palette.muted)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 18)
+            } else {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(viewModel.transcriptionReplacementRules) { rule in
+                            dictionaryRuleRow(rule)
+                        }
+                    }
+                    .padding(.vertical, 1)
+                }
+                .frame(maxHeight: 260)
+            }
+
+            HStack {
+                Text("\(viewModel.transcriptionReplacementRules.filter(\.isUsable).count) active")
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(Palette.muted)
+
+                Spacer()
+
+                Button {
+                    viewModel.resetTranscriptionReplacements()
+                } label: {
+                    Label("Reset", systemImage: "arrow.uturn.backward")
+                }
+                .controlSize(.small)
+            }
+        }
+    }
+
     private var teamSetupSubtitle: String {
         if !viewModel.globalUsageSettings.enabled { return "Sharing off" }
         return viewModel.globalUsageSettings.team.rawValue
@@ -399,6 +477,21 @@ struct MainView: View {
                     get: { viewModel.overlayPillVisible },
                     set: { viewModel.setOverlayPillVisible($0) }
                 ))
+
+                Spacer()
+
+                Button {
+                    showDictionary.toggle()
+                } label: {
+                    Label("Dictionary", systemImage: "textformat.abc")
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .popover(isPresented: $showDictionary, arrowEdge: .top) {
+                    customDictionaryPopover
+                        .padding(16)
+                        .frame(width: 500)
+                }
             }
         }
     }
@@ -613,6 +706,61 @@ struct MainView: View {
             }
             .controlSize(.small)
         }
+    }
+
+    private func dictionaryRuleRow(_ rule: TranscriptionReplacementRule) -> some View {
+        HStack(spacing: 8) {
+            Toggle("Enabled", isOn: Binding(
+                get: { replacementRule(for: rule.id)?.isEnabled ?? rule.isEnabled },
+                set: { viewModel.updateTranscriptionReplacement(id: rule.id, isEnabled: $0) }
+            ))
+            .labelsHidden()
+            .toggleStyle(.switch)
+            .controlSize(.small)
+
+            TextField("Heard as", text: Binding(
+                get: { replacementRule(for: rule.id)?.trigger ?? rule.trigger },
+                set: { viewModel.updateTranscriptionReplacement(id: rule.id, trigger: $0) }
+            ))
+            .textFieldStyle(.roundedBorder)
+            .font(.system(size: 11))
+
+            Text("->")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(Palette.muted)
+
+            TextField("Replace with", text: Binding(
+                get: { replacementRule(for: rule.id)?.replacement ?? rule.replacement },
+                set: { viewModel.updateTranscriptionReplacement(id: rule.id, replacement: $0) }
+            ))
+            .textFieldStyle(.roundedBorder)
+            .font(.system(size: 11))
+
+            Button(role: .destructive) {
+                viewModel.deleteTranscriptionReplacement(id: rule.id)
+            } label: {
+                Image(systemName: "trash")
+            }
+            .buttonStyle(.borderless)
+        }
+    }
+
+    private var canAddDictionaryRule: Bool {
+        !dictionaryTriggerInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+            !dictionaryReplacementInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private func addDictionaryRuleFromInputs() {
+        viewModel.addTranscriptionReplacement(
+            trigger: dictionaryTriggerInput,
+            replacement: dictionaryReplacementInput
+        )
+        dictionaryTriggerInput = ""
+        dictionaryReplacementInput = ""
+    }
+
+    private func replacementRule(for id: UUID) -> TranscriptionReplacementRule? {
+        viewModel.transcriptionReplacementRules.first { $0.id == id }
     }
 
     private func statusBadge(_ title: String, isOn: Bool) -> some View {

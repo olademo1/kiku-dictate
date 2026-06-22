@@ -3,20 +3,20 @@ import XCTest
 
 final class TranscriptionGlossaryNormalizerTests: XCTestCase {
     func testNormalizesDataikuVariants() {
-        let input = "Data IQ is remote. Dereika, Didaiku, and Daydaiku should all match."
+        let input = "Data IQ is remote. Data Aiku, Dereika, Didaiku, and Daydaiku should all match."
 
         XCTAssertEqual(
             TranscriptionGlossaryNormalizer.normalize(input),
-            "Dataiku is remote. Dataiku, Dataiku, and Dataiku should all match."
+            "Dataiku is remote. Dataiku, Dataiku, Dataiku, and Dataiku should all match."
         )
     }
 
     func testNormalizesDataikerVariants() {
-        let input = "Data Iker, Data Eicher, and Idita Eicher are the same word."
+        let input = "Data Iker, Data Aiker, Data Eicher, Idita Eicher, and Adida Aiker are related phrases."
 
         XCTAssertEqual(
             TranscriptionGlossaryNormalizer.normalize(input),
-            "Dataiker, Dataiker, and Dataiker are the same word."
+            "Dataiker, Dataiker, Dataiker, Dataiker, and a Dataiker are related phrases."
         )
     }
 
@@ -26,6 +26,31 @@ final class TranscriptionGlossaryNormalizerTests: XCTestCase {
         XCTAssertEqual(
             TranscriptionGlossaryNormalizer.normalize(input),
             "MyData IQ and Data IQify should not be changed, but Dataiku should."
+        )
+    }
+
+    func testAppliesUserProvidedRulesWithoutRegexInterpretation() {
+        let rules = [
+            TranscriptionReplacementRule(trigger: "magic.pulse", replacement: "Magic Pulse"),
+            TranscriptionReplacementRule(trigger: "a+b", replacement: "A plus B")
+        ]
+
+        XCTAssertEqual(
+            TranscriptionGlossaryNormalizer.normalize("magic.pulse and a+b work, but magicXpulse does not.", using: rules),
+            "Magic Pulse and A plus B work, but magicXpulse does not."
+        )
+    }
+
+    func testIgnoresDisabledOrIncompleteRules() {
+        let rules = [
+            TranscriptionReplacementRule(trigger: "Data IQ", replacement: "Dataiku", isEnabled: false),
+            TranscriptionReplacementRule(trigger: "", replacement: "Dataiku"),
+            TranscriptionReplacementRule(trigger: "Dereika", replacement: "")
+        ]
+
+        XCTAssertEqual(
+            TranscriptionGlossaryNormalizer.normalize("Data IQ and Dereika", using: rules),
+            "Data IQ and Dereika"
         )
     }
 }
